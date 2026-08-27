@@ -21,8 +21,10 @@ Run:
 
 from __future__ import annotations
 
+import http.client
 import json
 import os
+import secrets
 import socket
 import ssl
 import sys
@@ -185,6 +187,13 @@ def probe_http(host: str, port: int, path: str) -> HttpProbeResult:
             # Uncaught, this would abort the whole campaign run (every open
             # port on every target) before any report gets written.
             continue
+        except (http.client.HTTPException, ConnectionError):
+            # A configured port that speaks a non-HTTP protocol (e.g. an
+            # SSH banner) makes http.client raise BadStatusLine or
+            # RemoteDisconnected instead of URLError/TimeoutError. Same
+            # "don't abort the whole campaign over one bad port" reasoning
+            # as the TimeoutError case above.
+            continue
     return last_result
 
 
@@ -219,7 +228,14 @@ def main() -> int:
             print("  no actenon-kernel signal found on the checked paths — inspect manually before assuming any exploit module applies.")
         reports.append(report)
 
-    out_path = f"recon_report_{datetime.now(timezone.utc).strftime('%Y%m%dT%H%M%SZ')}.json"
+    # A random suffix, not just a second-precision timestamp: two recon
+    # runs finishing in the same UTC second (plausible under contest
+    # automation) would otherwise collide on this filename and one run's
+    # report would silently overwrite the other's.
+    out_path = (
+        f"recon_report_{datetime.now(timezone.utc).strftime('%Y%m%dT%H%M%SZ')}"
+        f"_{secrets.token_hex(4)}.json"
+    )
     with open(out_path, "w", encoding="utf-8") as fh:
         json.dump(
             [

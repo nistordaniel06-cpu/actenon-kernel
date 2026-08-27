@@ -19,6 +19,7 @@ Run:
 from __future__ import annotations
 
 import json
+import secrets
 import sys
 from datetime import datetime, timezone
 
@@ -73,7 +74,15 @@ def main() -> int:
             }
         )
 
-    out_path = f"campaign_report_{datetime.now(timezone.utc).strftime('%Y%m%dT%H%M%SZ')}.json"
+    # A random suffix, not just a second-precision timestamp: two campaign
+    # runs finishing in the same UTC second (plausible under parallel
+    # contest automation) would otherwise collide on this filename and one
+    # run's report would silently overwrite (or corrupt, under concurrent
+    # writes) the other's.
+    out_path = (
+        f"campaign_report_{datetime.now(timezone.utc).strftime('%Y%m%dT%H%M%SZ')}"
+        f"_{secrets.token_hex(4)}.json"
+    )
     with open(out_path, "w", encoding="utf-8") as fh:
         json.dump(campaign_report, fh, indent=2)
 

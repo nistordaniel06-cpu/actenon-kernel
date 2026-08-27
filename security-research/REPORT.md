@@ -92,9 +92,12 @@ endpoint — exactly the pattern shown in the README and in
   protected action with an arbitrary 16+ byte string as `proof_token` and
   receive `valid=True` plus a minted receipt.
 - `action_hash`, `audience`, and `target` on the request are accepted
-  as-is and echoed into the receipt — they are never checked against
-  anything, so nothing prevents an attacker from claiming any action
-  shape they like.
+  as-is and never checked against anything, so nothing prevents an
+  attacker from claiming any action shape they like. `construct_receipt()`
+  only serializes `action_hash` (truncated to 16 chars) and `boundary_id`/
+  `action_type` into the receipt — `audience` and `target` are accepted
+  but not persisted anywhere, so a forged receipt carries even less
+  forensic evidence of the claimed action than the request itself did.
 - Replay protection (`self._replay_keys`) only prevents *reusing the
   identical token*; a fresh random token bypasses it trivially and
   passes as a "different" proof (see PoC step [1], and

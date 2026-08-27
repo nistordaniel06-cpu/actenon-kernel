@@ -163,17 +163,29 @@ def _build_handler(wallet: Wallet) -> type[BaseHTTPRequestHandler]:
                 return
 
             try:
-                result = wallet.credit(
-                    account_id=str(payload["account_id"]),
-                    amount_minor=int(payload["amount_minor"]),
-                    proof_token=str(payload.get("proof_token", "")),
-                    action_hash=str(payload.get("action_hash", "")),
-                    audience=str(payload.get("audience", "service:wallet")),
-                    boundary_id=str(payload.get("boundary_id", "wallet-credit-api")),
-                )
+                account_id = str(payload["account_id"])
+                amount_minor = int(payload["amount_minor"])
             except (KeyError, ValueError) as exc:
                 self._send_json(HTTPStatus.BAD_REQUEST, {"ok": False, "reason": str(exc)})
                 return
+            if amount_minor <= 0:
+                # Without this, an accepted (forged-proof) request with a
+                # negative amount_minor becomes an arbitrary DEBIT against
+                # any account through this nominal "credit" endpoint — and
+                # a negative forged record can cancel out a positive one in
+                # defender_detect.py's "total money credited on forged
+                # proofs" sum, hiding the attack from the summary.
+                self._send_json(HTTPStatus.BAD_REQUEST, {"ok": False, "reason": "amount_minor must be positive"})
+                return
+
+            result = wallet.credit(
+                account_id=account_id,
+                amount_minor=amount_minor,
+                proof_token=str(payload.get("proof_token", "")),
+                action_hash=str(payload.get("action_hash", "")),
+                audience=str(payload.get("audience", "service:wallet")),
+                boundary_id=str(payload.get("boundary_id", "wallet-credit-api")),
+            )
 
             status = HTTPStatus.OK if result["ok"] else HTTPStatus.FORBIDDEN
             self._send_json(status, result)

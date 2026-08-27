@@ -530,6 +530,13 @@ def _build_handler(empire: Empire) -> type[BaseHTTPRequestHandler]:
                 payload = json.loads(raw or b"{}")
             except ValueError:
                 payload = {}
+            if not isinstance(payload, dict):
+                # Syntactically valid JSON isn't necessarily an object —
+                # "[]" or "null" parse fine but would raise AttributeError
+                # on payload.get(...) below, dropping the connection
+                # instead of returning a clean 400.
+                self._send_json(HTTPStatus.BAD_REQUEST, {"ok": False, "error": "body must be a JSON object"})
+                return
 
             if parsed.path == "/api/heist":
                 out = empire.heist(str(payload.get("type", "")))
