@@ -28,6 +28,9 @@ import urllib.request
 from urllib.parse import urlencode
 
 
+REQUEST_TIMEOUT = 10.0
+
+
 def forge_proof_token() -> str:
     """A 'proof' that is nothing but random bytes. No key, no signature,
     not even shaped like a PCCB. Only requirement: >= 16 characters,
@@ -40,7 +43,12 @@ def post_json(url: str, payload: dict) -> tuple[int, dict]:
     data = json.dumps(payload).encode("utf-8")
     req = urllib.request.Request(url, data=data, headers={"Content-Type": "application/json"}, method="POST")
     try:
-        with urllib.request.urlopen(req) as resp:
+        # An explicit timeout — urlopen()'s default is unbounded, so a
+        # target that accepts the connection but never finishes its
+        # response would otherwise hang the PoC forever on round 1
+        # instead of reaching a controlled "unreachable/misconfigured"
+        # result.
+        with urllib.request.urlopen(req, timeout=REQUEST_TIMEOUT) as resp:
             return resp.status, json.loads(resp.read())
     except urllib.error.HTTPError as exc:
         body = exc.read()
@@ -52,10 +60,12 @@ def post_json(url: str, payload: dict) -> tuple[int, dict]:
             # PoC reports a controlled rejection instead of crashing with
             # a traceback before it can print anything useful.
             return exc.code, {"ok": False, "reason": f"non-JSON error response: {body[:200]!r}"}
+    except (urllib.error.URLError, TimeoutError) as exc:
+        return 0, {"ok": False, "reason": f"connection failed: {exc}"}
 
 
 def get_json(url: str) -> dict:
-    with urllib.request.urlopen(url) as resp:
+    with urllib.request.urlopen(url, timeout=REQUEST_TIMEOUT) as resp:
         return json.loads(resp.read())
 
 

@@ -73,28 +73,38 @@ class Wallet:
             boundary_id=boundary_id,
             target=f"wallet:{account_id}",
         )
-        result = self._verifier.verify_boundary(request)
+        # Verification and the balance update happen under the SAME lock,
+        # serialized across request threads (this runs on a
+        # ThreadingHTTPServer). Without this, BoundaryVerifier's own
+        # _replay_keys set (a plain set(), no internal lock) lets two
+        # concurrent requests carrying the IDENTICAL token both pass its
+        # membership check before either one inserts it — one proof,
+        # two accepted credits.
+        with self._lock:
+            result = self._verifier.verify_boundary(request)
 
-        record: dict[str, Any] = {
-            "timestamp": datetime.now(timezone.utc).isoformat(),
-            "account_id": account_id,
-            "amount_minor": amount_minor,
-            "proof_token": proof_token,
-            "valid": result.valid,
-            "reason": result.reason,
-            "refusal_code": result.refusal_code,
-            "proof_id": result.proof_id,
-        }
+            record: dict[str, Any] = {
+                "timestamp": datetime.now(timezone.utc).isoformat(),
+                "account_id": account_id,
+                "amount_minor": amount_minor,
+                "proof_token": proof_token,
+                "valid": result.valid,
+                "reason": result.reason,
+                "refusal_code": result.refusal_code,
+                "proof_id": result.proof_id,
+            }
 
-        if result.valid:
-            with self._lock:
+            if result.valid:
                 self._balances[account_id] = self._balances.get(account_id, 0) + amount_minor
                 new_balance = self._balances[account_id]
-            record["new_balance_minor"] = new_balance
-            receipt = self._verifier.construct_receipt(request, result, outcome="succeeded")
-            record["receipt"] = receipt
-        else:
-            new_balance = self.balance(account_id)
+                record["new_balance_minor"] = new_balance
+                receipt = self._verifier.construct_receipt(request, result, outcome="succeeded")
+                record["receipt"] = receipt
+            else:
+                # Direct dict access, not self.balance(account_id) — that
+                # method re-acquires self._lock, which would deadlock
+                # here since threading.Lock is not reentrant.
+                new_balance = self._balances.get(account_id, STARTING_BALANCE_MINOR)
 
         _append_ledger(record)
 
@@ -169,6 +179,20 @@ def _build_handler(wallet: Wallet) -> type[BaseHTTPRequestHandler]:
                 # terminate the request thread instead of returning 400.
                 amount_minor = int(payload["amount_minor"])
             except (KeyError, ValueError, TypeError) as exc:
+                # Logged too, best-effort — the module docstring promises
+                # every attempt (accepted or refused) is recorded, and a
+                # request with a missing/malformed required field is
+                # still evidence of an attempted (if broken) abuse.
+                _append_ledger({
+                    "timestamp": datetime.now(timezone.utc).isoformat(),
+                    "account_id": str(payload.get("account_id", "")),
+                    "amount_minor": payload.get("amount_minor"),
+                    "proof_token": str(payload.get("proof_token", "")),
+                    "valid": False,
+                    "reason": str(exc),
+                    "refusal_code": "MALFORMED_FIELD",
+                    "proof_id": None,
+                })
                 self._send_json(HTTPStatus.BAD_REQUEST, {"ok": False, "reason": str(exc)})
                 return
             if amount_minor <= 0:

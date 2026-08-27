@@ -36,6 +36,12 @@ from urllib.error import URLError, HTTPError
 
 CONNECT_TIMEOUT = 2.0
 HTTP_TIMEOUT = 3.0
+# The real /healthz payload (LocalProofRuntimeService.health_payload())
+# includes URLs, storage paths, capabilities, and key-discovery/trust
+# metadata — comfortably over 512 bytes. A bounded read that's too small
+# truncates the JSON, json.loads() then rejects it, and recon reports no
+# signal even against a genuine actenon-kernel deployment.
+MAX_RESPONSE_BYTES = 65536
 
 
 class _NoRedirectHandler(HTTPRedirectHandler):
@@ -194,7 +200,7 @@ def probe_http(host: str, port: int, path: str) -> HttpProbeResult:
         try:
             req = Request(url, headers={"User-Agent": "recon/1.0"}, method="GET")
             with opener.open(req, timeout=HTTP_TIMEOUT) as resp:
-                body = resp.read(512).decode("utf-8", errors="replace")
+                body = resp.read(MAX_RESPONSE_BYTES).decode("utf-8", errors="replace")
                 looks_like_actenon = _looks_like_actenon_response(path, body)
                 return HttpProbeResult(port=port, path=path, status=resp.status, looks_like_actenon=looks_like_actenon, snippet=body[:200])
         except HTTPError as exc:
