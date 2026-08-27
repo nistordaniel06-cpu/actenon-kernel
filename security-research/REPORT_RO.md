@@ -75,7 +75,7 @@ Vezi `exploit_boundary_verifier.py` din același folder. Trei demonstrații:
 
 1. **Bypass simplu** — un `BoundaryVerifier()` fără niciun verificator atașat acceptă un token falsificat, nesemnat, și emite un receipt de succes pentru o acțiune `payment.refund` către un cont controlat de atacator.
 2. **Bypass-ul persistă chiar cu verificator real atașat** — construirea `BoundaryVerifier(pccb_verifier=<PCCBVerifier configurat corect>)` nu schimbă nimic; token-ul falsificat tot trece verificarea, ceea ce dovedește că verificatorul real este cod mort pe acest traseu.
-3. **Contrast** — aceeași intrare falsificată, trimisă către traseul real de verificare al kernel-ului (`PCCB.from_dict` / `PCCBVerifier`), este respinsă corect, ceea ce arată că bypass-ul este izolat la `BoundaryVerifier` și nu e o slăbiciune a verificatorului criptografic de bază sau a `ActenonGate` / `ProtectedExecutor` (care chiar apelează verificatorul real, corect).
+3. **Contrast** — aceeași intrare falsificată, trimisă către traseul real de verificare al kernel-ului (`PCCB.from_dict` / `PCCBVerifier`), este respinsă corect, ceea ce arată că bypass-ul este izolat la `BoundaryVerifier` și nu e o slăbiciune a verificatorului criptografic de bază. Acest contrast e valabil pentru `ActenonGate` și pentru traseul normal, non-idempotent, de verificare al `ProtectedExecutor` — **nu** se extinde la scurtătura de idempotență a `ProtectedExecutor`, care e un finding separat, confirmat: pentru un `operation_id` repetat cu un `action_hash` identic, `execute()` returnează succes din starea din cache *înainte* să apeleze deloc `proof_verifier.verify()`, deci un PCCB nesemnat e acceptat pe acel traseu (vezi `investigate_idempotency_order.py` și `investigate_unbounded_receipts.py`).
 
 Rulare:
 

@@ -135,23 +135,54 @@ def check_port(host: str, port: int) -> PortResult:
 def _looks_like_actenon_response(path: str, body: str) -> bool:
     """Structural fingerprint for a *successful* response body only.
 
-    Only called on 2xx responses — an error page that echoes the requested
-    URL back (a common 404/diagnostics pattern) would otherwise contain
-    "actenon" merely because the probed PATH itself contains that word,
-    producing a false signal on a completely unrelated service.
+    Only called on 2xx responses. Deliberately NOT a substring search
+    across the whole body: a soft-404/diagnostics page that echoes the
+    requested URL back with HTTP 200 (a common pattern) would contain
+    "actenon" merely because the probed PATH itself contains that word —
+    that's exactly the false positive an earlier version of this check
+    was vulnerable to. Instead, each fingerprint path is checked against
+    the actual JSON shape actenon-kernel's own local_runtime_server.py
+    (or our bundled demo targets) return for it.
     """
-    lowered = body.lower()
-    if any(marker in lowered for marker in ("actenon", "pccb", "boundaryverifier", "key_discovery")):
-        return True
+    try:
+        data = json.loads(body)
+    except (ValueError, TypeError):
+        return False
+    if not isinstance(data, dict):
+        return False
+
+    if path == "/healthz":
+        # See LocalProofRuntimeService.health_payload() in
+        # actenon/local_runtime_server.py.
+        return (
+            data.get("ok") is True
+            and isinstance(data.get("intents_url"), str)
+            and isinstance(data.get("preflight_url"), str)
+        )
+    if path in ("/.well-known/actenon/keys.json", "/.well-known/actenon-keys.json"):
+        # See build_key_discovery_document() in
+        # actenon/proof/signers/well_known.py: a real document declares
+        # contract={"name": "key_discovery", ...} and a "keys" list.
+        contract = data.get("contract")
+        return (
+            isinstance(contract, dict)
+            and contract.get("name") == "key_discovery"
+            and isinstance(data.get("keys"), list)
+        )
+    if path in ("/v1/intents", "/v1/preflight"):
+        # These are POST-only on the real server (do_GET there only
+        # serves /healthz and the well-known key paths) — a GET always
+        # 404s even against a genuine actenon-kernel deployment, so a
+        # 2xx response here can never be real evidence either way.
+        return False
     if path == "/wallet/balance":
         # The bundled demo target (ctf/credit_service.py) never mentions
         # "actenon" in its responses, but its /wallet/balance shape is
         # distinctive enough to recognize on its own.
-        try:
-            data = json.loads(body)
-        except (ValueError, TypeError):
-            return False
-        return isinstance(data, dict) and "account_id" in data and "balance_minor" in data
+        return "account_id" in data and "balance_minor" in data
+    if path == "/api/state":
+        # Exploit Empire's (empire_server.py) own snapshot() shape.
+        return "mafia_level" in data and "heist_info" in data
     return False
 
 

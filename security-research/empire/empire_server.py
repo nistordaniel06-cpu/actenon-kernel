@@ -167,7 +167,15 @@ class Empire:
         return _default_state()
 
     def _save_state(self) -> None:
-        STATE_PATH.write_text(json.dumps(self.state, indent=2))
+        # Write-then-rename instead of an in-place write: killing the
+        # process (or losing power) mid-write_text() can leave truncated
+        # JSON, which _load_state() then silently treats as corrupt and
+        # replaces with _default_state() on the next launch, erasing all
+        # progress. Path.replace() is an atomic rename on the same
+        # filesystem, so a reader never observes a partial file.
+        tmp_path = STATE_PATH.with_suffix(".json.tmp")
+        tmp_path.write_text(json.dumps(self.state, indent=2))
+        tmp_path.replace(STATE_PATH)
 
     def _log(self, message: str) -> None:
         self.state["log"].insert(0, {"t": _utc_now().strftime("%H:%M:%S"), "message": message})
@@ -392,7 +400,11 @@ class Empire:
                 payout = info["base_min"] * multiplier
             elif heist_type == "bigscore":
                 base_amount = random.randint(info["base_min"], info["base_max"])
-                scaled_amount = int(base_amount * (1 + 0.2 * self._mafia_level()))
+                # Apply `multiplier` here too — the UI advertises it as
+                # applying to every heist, but training_level (which
+                # feeds multiplier, not mafia_level) previously had no
+                # effect on this one's payout.
+                scaled_amount = int(base_amount * (1 + 0.2 * self._mafia_level()) * multiplier)
                 success, detail = self._run_big_score(scaled_amount)
                 payout = scaled_amount * 1.0  # already scaled; multiplier baked into amount
             else:

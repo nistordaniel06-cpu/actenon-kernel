@@ -43,7 +43,15 @@ def post_json(url: str, payload: dict) -> tuple[int, dict]:
         with urllib.request.urlopen(req) as resp:
             return resp.status, json.loads(resp.read())
     except urllib.error.HTTPError as exc:
-        return exc.code, json.loads(exc.read())
+        body = exc.read()
+        try:
+            return exc.code, json.loads(body)
+        except ValueError:
+            # A fixed or unrelated target can reject with an empty or
+            # HTML error body instead of JSON — parse defensively so the
+            # PoC reports a controlled rejection instead of crashing with
+            # a traceback before it can print anything useful.
+            return exc.code, {"ok": False, "reason": f"non-JSON error response: {body[:200]!r}"}
 
 
 def get_json(url: str) -> dict:

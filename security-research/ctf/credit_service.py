@@ -178,6 +178,21 @@ def _build_handler(wallet: Wallet) -> type[BaseHTTPRequestHandler]:
                 # a negative forged record can cancel out a positive one in
                 # defender_detect.py's "total money credited on forged
                 # proofs" sum, hiding the attack from the summary.
+                #
+                # Logged to the ledger too — the module docstring promises
+                # "every attempt (accepted or refused)" is recorded, and a
+                # refused attempt this early is still evidence of an
+                # attempted abuse the blue team should see.
+                _append_ledger({
+                    "timestamp": datetime.now(timezone.utc).isoformat(),
+                    "account_id": account_id,
+                    "amount_minor": amount_minor,
+                    "proof_token": str(payload.get("proof_token", "")),
+                    "valid": False,
+                    "reason": "amount_minor must be positive",
+                    "refusal_code": "INVALID_AMOUNT",
+                    "proof_id": None,
+                })
                 self._send_json(HTTPStatus.BAD_REQUEST, {"ok": False, "reason": "amount_minor must be positive"})
                 return
 
