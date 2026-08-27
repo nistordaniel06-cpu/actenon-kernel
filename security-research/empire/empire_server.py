@@ -1,18 +1,27 @@
 #!/usr/bin/env python3
 """
-Exploit Empire — "Mafia vs Poliția" idle game whose coins come from the
-REAL actenon-kernel vulnerabilities confirmed in REPORT.md, not from fake
-random numbers. Every "heist" button in the frontend calls actual
-actenon-kernel library code:
+Exploit Empire — "Mafia vs Poliția" idle game whose coins come from real
+actenon-kernel library calls, not from fake random numbers. Every "heist"
+button in the frontend calls actual actenon-kernel library code:
 
   1. "Lovitura la portofel"  -> actenon.boundary.BoundaryVerifier bypass
-     (any 16+ char string accepted as a valid proof — CWE-306)
+     (any 16+ char string accepted as a valid proof — CWE-306). A real,
+     confirmed KERNEL vulnerability — see REPORT.md.
   2. "Furtul contractului"   -> ProtectedExecutor + IdempotencyStore
      ordering bug (idempotent replay returns success for an UNSIGNED
-     PCCB, never calling proof_verifier.verify())
-  3. "Lovitura cea mare"     -> the public default local HMAC secret
-     (LOCAL_PROOF_SECRET in actenon/proof/signers/local.py) used to mint
-     a fully, genuinely valid signed PCCB from scratch
+     PCCB, never calling proof_verifier.verify()). A real, confirmed
+     KERNEL vulnerability — see REPORT.md.
+  3. "Lovitura cea mare"     -> NOT a kernel vulnerability. It's a
+     simulated DEPLOYMENT MISCONFIGURATION: HmacSha256Signer's own
+     constructor calls _guard_local_hmac_creation(), which refuses to
+     construct in any production-like environment even when the secret
+     is passed directly (see actenon/proof/signers/local.py) — so this
+     heist only "works" here because the demo's victim-bank signer is
+     deliberately built with the public LOCAL_PROOF_SECRET while the
+     process stays in a local/dev-like environment. It demonstrates the
+     consequence of an operator shipping that secret to production
+     against the kernel's own guard and its documented warning, not a
+     flaw in the kernel itself.
 
 "Poliția" = a detection heuristic modeled on defender_detect.py: heists
 that use an unsigned/garbage token raise heat fast and can get busted;
@@ -95,7 +104,7 @@ HEIST_INFO = {
     },
     "bigscore": {
         "name": "Lovitura cea mare",
-        "technique": "cheia HMAC locala e publica in sursa (LOCAL_PROOF_SECRET) -> semnaturi 100% valide, fara nicio bresa de logica",
+        "technique": "MISCONFIGURARE SIMULATA, nu bug de kernel: cheia HMAC locala publica (LOCAL_PROOF_SECRET) folosita ca in productie, desi HmacSha256Signer refuza asta in medii de tip productie -> semnaturi 100% valide",
         "base_min": 8000,
         "base_max": 20000,
         "heat": 3,
@@ -339,7 +348,15 @@ class Empire:
         """Real call: mint a fully valid PCCB using the PUBLIC default
         local HMAC secret (LOCAL_PROOF_SECRET), then verify it against
         the 'victim bank' verifier that also (mistakenly) uses that same
-        public default secret in what should have been production."""
+        public default secret in what should have been production.
+
+        Not a kernel bug: HmacSha256Signer.__post_init__() calls
+        _guard_local_hmac_creation(), which raises in any real
+        production-like environment. This only succeeds because both
+        signers here are constructed in this process's actual (local/dev)
+        environment — simulating an operator who shipped the local secret
+        to production anyway, against the kernel's own guard.
+        """
         now = _utc_now()
         intent = ActionIntent(
             intent_id=f"intent_bigscore_{_secrets.token_hex(6)}",
@@ -536,12 +553,27 @@ def _build_handler(empire: Empire) -> type[BaseHTTPRequestHandler]:
 
         def do_POST(self) -> None:  # noqa: N802
             parsed = urlparse(self.path)
+            # A cross-origin <form> POST can only ever carry one of the
+            # three CORS "safelisted" content types
+            # (application/x-www-form-urlencoded, multipart/form-data,
+            # text/plain) — never application/json, unless the browser
+            # sends a CORS preflight first, which this server would have
+            # to opt into (it sends no CORS headers, so it doesn't).
+            # Requiring the exact JSON content type therefore blocks the
+            # simple-form CSRF vector against these state-changing routes
+            # (/api/heist, /api/shop/*, /api/reset), which otherwise have
+            # no session or auth model to build a token against.
+            content_type = self.headers.get("Content-Type", "").split(";")[0].strip().lower()
+            if content_type != "application/json":
+                self._send_json(HTTPStatus.BAD_REQUEST, {"ok": False, "error": "Content-Type must be application/json"})
+                return
             length = int(self.headers.get("Content-Length", "0"))
             raw = self.rfile.read(length) if length else b"{}"
             try:
                 payload = json.loads(raw or b"{}")
             except ValueError:
-                payload = {}
+                self._send_json(HTTPStatus.BAD_REQUEST, {"ok": False, "error": "invalid JSON"})
+                return
             if not isinstance(payload, dict):
                 # Syntactically valid JSON isn't necessarily an object —
                 # "[]" or "null" parse fine but would raise AttributeError

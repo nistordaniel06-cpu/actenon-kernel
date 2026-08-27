@@ -76,6 +76,12 @@ def main() -> int:
     parser.add_argument("--rounds", type=int, default=5)
     parser.add_argument("--amount", type=int, default=500_000, help="amount per round, in minor units (bani/cents)")
     args = parser.parse_args()
+    # A trailing slash (e.g. "http://127.0.0.1:8900/", a common way to
+    # supply a base URL) would otherwise produce "//wallet/credit", which
+    # credit_service.py rejects since it matches self.path against
+    # "/wallet/credit" exactly — the PoC would wrongly report a
+    # non-vulnerable target solely because of that slash.
+    args.url = args.url.rstrip("/")
 
     print(f"[attacker] Target: {args.url}")
     print(f"[attacker] No signing key. No grant. No relationship with the issuer. Let's go.\n")

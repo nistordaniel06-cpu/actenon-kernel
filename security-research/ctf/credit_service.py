@@ -242,9 +242,18 @@ def main() -> int:
     parser = argparse.ArgumentParser(description="Defender: simulated credit/wallet service.")
     parser.add_argument("--host", default="127.0.0.1")
     parser.add_argument("--port", type=int, default=8900)
+    parser.add_argument(
+        "--fresh", action="store_true",
+        help="Start with an empty ledger (default: keep an existing "
+             "transactions.jsonl from a prior run).",
+    )
     args = parser.parse_args()
 
-    if LEDGER_PATH.exists():
+    # Only clear on explicit request. Unconditionally deleting the ledger
+    # on every startup meant restarting the service between an attack run
+    # and defender_detect.py destroyed the blue team's evidence — exactly
+    # the data this module's docstring promises to retain.
+    if args.fresh and LEDGER_PATH.exists():
         LEDGER_PATH.unlink()
 
     wallet = Wallet()

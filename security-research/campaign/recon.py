@@ -31,7 +31,7 @@ import sys
 from dataclasses import dataclass, field
 from datetime import datetime, timezone
 from typing import Any
-from urllib.request import Request, build_opener, HTTPRedirectHandler, HTTPSHandler
+from urllib.request import Request, build_opener, HTTPRedirectHandler, HTTPSHandler, ProxyHandler
 from urllib.error import URLError, HTTPError
 
 CONNECT_TIMEOUT = 2.0
@@ -61,9 +61,32 @@ class _NoRedirectHandler(HTTPRedirectHandler):
 
 def _build_opener(ssl_context: ssl.SSLContext | None):
     handlers: list[Any] = [_NoRedirectHandler()]
+    if os.environ.get("RECON_ALLOW_PROXY") != "1":
+        # build_opener() otherwise installs its own default,
+        # environment-backed ProxyHandler — if HTTP_PROXY/HTTPS_PROXY is
+        # set and the target isn't covered by NO_PROXY, probes would go
+        # to an unlisted proxy instead of directly to the authorized
+        # target, silently defeating this tool's "only ever touches
+        # configured targets" scope rule (and potentially leaking forged
+        # requests through a corporate proxy). Opt in explicitly if you
+        # actually need proxied access to a target.
+        handlers.append(ProxyHandler({}))
     if ssl_context is not None:
         handlers.append(HTTPSHandler(context=ssl_context))
     return build_opener(*handlers)
+
+
+def _format_host(host: str) -> str:
+    """Bracket an IPv6 literal for use in a URL authority.
+
+    Without this, an IPv6 target like `::1` interpolates into
+    `http://::1:8900/...` instead of `http://[::1]:8900/...`; urllib
+    rejects the malformed authority, the probe is treated as a failure,
+    and a genuinely reachable target gets skipped entirely.
+    """
+    if ":" in host and not host.startswith("["):
+        return f"[{host}]"
+    return host
 
 
 def _build_ssl_context() -> ssl.SSLContext | None:
@@ -196,7 +219,7 @@ def probe_http(host: str, port: int, path: str) -> HttpProbeResult:
     last_result = HttpProbeResult(port=port, path=path, status=None, looks_like_actenon=False)
     opener = _build_opener(_build_ssl_context())
     for scheme in ("http", "https"):
-        url = f"{scheme}://{host}:{port}{path}"
+        url = f"{scheme}://{_format_host(host)}:{port}{path}"
         try:
             req = Request(url, headers={"User-Agent": "recon/1.0"}, method="GET")
             with opener.open(req, timeout=HTTP_TIMEOUT) as resp:
