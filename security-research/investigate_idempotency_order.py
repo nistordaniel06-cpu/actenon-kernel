@@ -7,8 +7,14 @@ unsigned/garbage PCCB is presented for a known operation_id+action_hash?
 Uses the repo's own tests/security/helpers.py fixtures.
 """
 import sys
-sys.path.insert(0, "/home/user/actenon-kernel")
-sys.path.insert(0, "/home/user/actenon-kernel/tests")
+from pathlib import Path
+
+# This script lives at <repo>/security-research/investigate_idempotency_order.py,
+# so its repo root is two levels up. Resolve it dynamically instead of a
+# hardcoded machine-specific path, so it works from any checkout.
+_REPO_ROOT = Path(__file__).resolve().parent.parent
+sys.path.insert(0, str(_REPO_ROOT))
+sys.path.insert(0, str(_REPO_ROOT / "tests"))
 
 import tempfile
 from dataclasses import replace

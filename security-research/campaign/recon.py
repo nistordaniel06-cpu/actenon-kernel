@@ -82,6 +82,7 @@ def check_port(host: str, port: int) -> PortResult:
 
 
 def probe_http(host: str, port: int, path: str) -> HttpProbeResult:
+    last_result = HttpProbeResult(path=path, status=None, looks_like_actenon=False)
     for scheme in ("http", "https"):
         url = f"{scheme}://{host}:{port}{path}"
         try:
@@ -94,7 +95,9 @@ def probe_http(host: str, port: int, path: str) -> HttpProbeResult:
                 )
                 return HttpProbeResult(path=path, status=resp.status, looks_like_actenon=looks_like_actenon, snippet=body[:200])
         except HTTPError as exc:
-            # A 4xx/5xx still tells us the port speaks HTTP and the path exists/doesn't.
+            # A 4xx/5xx still tells us the port speaks HTTP — but a
+            # plaintext request to a TLS-only port often surfaces as an
+            # HTTPError too, so keep trying https before settling on this.
             body = ""
             try:
                 body = exc.read(512).decode("utf-8", errors="replace")
@@ -104,10 +107,11 @@ def probe_http(host: str, port: int, path: str) -> HttpProbeResult:
                 marker in body.lower()
                 for marker in ("actenon", "pccb", "boundaryverifier", "key_discovery")
             )
-            return HttpProbeResult(path=path, status=exc.code, looks_like_actenon=looks_like_actenon, snippet=body[:200])
+            last_result = HttpProbeResult(path=path, status=exc.code, looks_like_actenon=looks_like_actenon, snippet=body[:200])
+            continue
         except URLError:
             continue
-    return HttpProbeResult(path=path, status=None, looks_like_actenon=False)
+    return last_result
 
 
 def recon_target(name: str, host: str, ports: list[int]) -> TargetReport:

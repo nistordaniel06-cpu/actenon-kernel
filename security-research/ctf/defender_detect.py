@@ -12,10 +12,13 @@ envelope.
 
 Heuristic used (documented, not a real fix):
   A genuine PCCB, once wired end to end, is a signed structured artifact.
-  The README's own example shows the eventual wire shape as a versioned,
-  base64url-encoded envelope: "v1.eyJ...". A forged token from the naive
-  attack (see attacker_drain_credit.py) is just raw random hex/text and
-  will not match that shape, and will not decode to JSON with a
+  Two wire shapes are accepted: the versioned envelope the README's example
+  shows ("v1.eyJ...") and the actual unprefixed base64url-JSON encoding
+  actenon-kernel's own FastAPI adapter produces (see
+  actenon/adapters/fastapi.py:encode_json_header) — a real deployment may
+  use either. A forged token from the naive attack (see
+  attacker_drain_credit.py) is just raw random hex/text and will not match
+  either shape, and will not decode to JSON with a
   {"contract": {"name": "pccb", ...}} structure.
 
 This lets a defender catch the *current* naive exploit script without
@@ -39,13 +42,21 @@ from pathlib import Path
 
 LEDGER_PATH = Path(__file__).resolve().parent / "transactions.jsonl"
 _ENVELOPE_RE = re.compile(r"^v1\.([A-Za-z0-9_-]+)$")
+_BARE_BASE64URL_RE = re.compile(r"^[A-Za-z0-9_-]+$")
 
 
 def looks_like_real_pccb_envelope(proof_token: str) -> tuple[bool, str]:
     match = _ENVELOPE_RE.match(proof_token)
-    if not match:
-        return False, "does not match the 'v1.<base64url>' PCCB envelope shape"
-    encoded = match.group(1)
+    if match:
+        encoded = match.group(1)
+    elif _BARE_BASE64URL_RE.match(proof_token):
+        # actenon-kernel's actual wire encoding (encode_json_header in
+        # actenon/adapters/fastapi.py) is unprefixed base64url JSON, with
+        # no "v1." prefix. Accept that shape too, or genuine traffic from
+        # the real adapter would always be flagged as forged.
+        encoded = proof_token
+    else:
+        return False, "does not match a recognized PCCB encoding (bare or 'v1.'-prefixed base64url)"
     padding = "=" * (-len(encoded) % 4)
     try:
         decoded = base64.urlsafe_b64decode(encoded + padding)

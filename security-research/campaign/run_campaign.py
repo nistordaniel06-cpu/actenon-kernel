@@ -45,14 +45,19 @@ def main() -> int:
         print(f"Open ports: {open_ports or 'none'}")
 
         target_findings = []
-        for port in open_ports:
-            for module in REGISTRY:
-                print(f"  running {module.NAME} against {host}:{port} ...")
-                results = module.run(name, host, port)
-                for r in results:
-                    tag = "CONFIRMED" if r.confirmed else "no finding"
-                    print(f"    [{tag}] {r.message}")
-                    target_findings.append(r.__dict__)
+        signals = recon.actenon_signals()
+        if not signals:
+            print("  no actenon-kernel signal found by recon; skipping exploit modules for "
+                  "this target (inspect manually first if you believe one still applies).")
+        else:
+            for port in open_ports:
+                for module in REGISTRY:
+                    print(f"  running {module.NAME} against {host}:{port} ...")
+                    results = module.run(name, host, port)
+                    for r in results:
+                        tag = "CONFIRMED" if r.confirmed else "no finding"
+                        print(f"    [{tag}] {r.message}")
+                        target_findings.append(r.__dict__)
 
         campaign_report.append(
             {

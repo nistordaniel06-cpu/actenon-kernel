@@ -127,7 +127,10 @@ class Empire:
     """Server-authoritative game state, plus the three real exploit paths."""
 
     def __init__(self) -> None:
-        self._lock = threading.Lock()
+        # RLock: heist()/shop_*() acquire this and then call snapshot(),
+        # which acquires it again on the same thread — a plain Lock would
+        # deadlock there (and hang every subsequent /api/state request).
+        self._lock = threading.RLock()
         self.state = self._load_state()
 
         # --- Heist 1 target: a live BoundaryVerifier, same as credit_service.py ---
