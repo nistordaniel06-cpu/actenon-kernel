@@ -61,7 +61,7 @@ from actenon.models import (
 )
 from actenon.models.runtime import ProtectedExecutionRequest
 from actenon.proof import PCCBMinter, PCCBVerifier, VerifierDisclosureMode, build_local_proof_signer
-from actenon.proof.signers.local import LOCAL_PROOF_SECRET
+from actenon.proof.signers.local import HmacSha256Signer, LOCAL_PROOF_KEY_ID, LOCAL_PROOF_SECRET
 from actenon.replay import ReplayProtector, build_default_replay_store
 
 import secrets as _secrets
@@ -345,7 +345,12 @@ class Empire:
             now=now,
         )
         attacker_minter = PCCBMinter(
-            signer=build_local_proof_signer(),  # attacker independently derives the SAME public secret
+            # Built directly from the PUBLIC constant, not build_local_proof_signer()
+            # (which would silently pick up ACTENON_LOCAL_HMAC_SECRET if the host
+            # running this game happens to have it set). The whole point of this
+            # heist is that the attacker only needs to have read the open-source
+            # LOCAL_PROOF_SECRET value — nothing host- or environment-specific.
+            signer=HmacSha256Signer(secret=LOCAL_PROOF_SECRET, key_id=LOCAL_PROOF_KEY_ID),
             issuer=PartyRef(type="service", id="victim-bank-issuer"),
         )
         decision = PolicyDecision(outcome="allow", summary="forged", rule_evaluations=(), reason_codes=("FORGED",))

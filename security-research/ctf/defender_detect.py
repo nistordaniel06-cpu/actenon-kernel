@@ -77,10 +77,10 @@ def main() -> int:
     transactions = [json.loads(line) for line in LEDGER_PATH.read_text().splitlines() if line.strip()]
     print(f"[defender] Loaded {len(transactions)} transaction(s) from {LEDGER_PATH}\n")
 
+    accepted = [tx for tx in transactions if tx.get("valid")]
+
     suspicious = []
-    for tx in transactions:
-        if not tx.get("valid"):
-            continue  # already refused, not a concern
+    for tx in accepted:
         token = tx.get("proof_token", "")
         plausible, why = looks_like_real_pccb_envelope(token)
         status = "OK " if plausible else "SUSPICIOUS"
@@ -89,7 +89,7 @@ def main() -> int:
         if not plausible:
             suspicious.append(tx)
 
-    print(f"\n[defender] {len(suspicious)} of {len(transactions)} ACCEPTED credit(s) "
+    print(f"\n[defender] {len(suspicious)} of {len(accepted)} ACCEPTED credit(s) "
           f"look like forged, unsigned proofs.")
     if suspicious:
         total_suspicious_minor = sum(tx["amount_minor"] for tx in suspicious)

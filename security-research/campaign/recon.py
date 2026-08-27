@@ -22,7 +22,9 @@ Run:
 from __future__ import annotations
 
 import json
+import os
 import socket
+import ssl
 import sys
 from dataclasses import dataclass, field
 from datetime import datetime, timezone
@@ -31,6 +33,22 @@ from urllib.error import URLError, HTTPError
 
 CONNECT_TIMEOUT = 2.0
 HTTP_TIMEOUT = 3.0
+
+
+def _build_ssl_context() -> ssl.SSLContext | None:
+    """Off by default. Set RECON_INSECURE_TLS=1 only for an authorized CTF
+    vulnbox using a self-signed certificate or an IP-addressed hostname that
+    doesn't match its certificate (a realistic case for a target configured
+    by IP, like targets.example.json) — never for scanning untrusted or
+    production hosts. Without this, a cert mismatch raises URLError, recon
+    records no signal, and run_campaign.py skips an otherwise-reachable
+    target entirely."""
+    if os.environ.get("RECON_INSECURE_TLS") == "1":
+        ctx = ssl.create_default_context()
+        ctx.check_hostname = False
+        ctx.verify_mode = ssl.CERT_NONE
+        return ctx
+    return None
 
 # Paths that suggest an actenon-kernel-based service. Add more here as you
 # learn what the contest's vulnbox actually exposes.
@@ -114,11 +132,12 @@ def _looks_like_actenon_response(path: str, body: str) -> bool:
 
 def probe_http(host: str, port: int, path: str) -> HttpProbeResult:
     last_result = HttpProbeResult(port=port, path=path, status=None, looks_like_actenon=False)
+    ssl_context = _build_ssl_context()
     for scheme in ("http", "https"):
         url = f"{scheme}://{host}:{port}{path}"
         try:
             req = Request(url, headers={"User-Agent": "recon/1.0"}, method="GET")
-            with urlopen(req, timeout=HTTP_TIMEOUT) as resp:
+            with urlopen(req, timeout=HTTP_TIMEOUT, context=ssl_context) as resp:
                 body = resp.read(512).decode("utf-8", errors="replace")
                 looks_like_actenon = _looks_like_actenon_response(path, body)
                 return HttpProbeResult(port=port, path=path, status=resp.status, looks_like_actenon=looks_like_actenon, snippet=body[:200])
