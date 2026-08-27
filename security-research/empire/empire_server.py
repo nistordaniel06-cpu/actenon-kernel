@@ -148,8 +148,12 @@ class Empire:
         self._seed_legit_contract()
 
         # --- Heist 3 target: a "victim bank" verifier using the PUBLIC ---
-        # --- default local secret (nobody overrode ACTENON_LOCAL_HMAC_SECRET). ---
-        self._victim_bank_signer = build_local_proof_signer()  # uses LOCAL_PROOF_SECRET, public
+        # --- default local secret explicitly (not build_local_proof_signer(),
+        # --- which would pick up ACTENON_LOCAL_HMAC_SECRET if the host running
+        # --- this game happens to have it set — that would make the victim and
+        # --- attacker signers mismatch and the heist would always fail, for a
+        # --- reason unrelated to the vulnerability being demonstrated).
+        self._victim_bank_signer = HmacSha256Signer(secret=LOCAL_PROOF_SECRET, key_id=LOCAL_PROOF_KEY_ID)
         self._victim_bank_verifier = PCCBVerifier(self._victim_bank_signer, disclosure_mode=VerifierDisclosureMode.LOCAL_DEBUG)
 
     # ---------------------------------------------------------------- state

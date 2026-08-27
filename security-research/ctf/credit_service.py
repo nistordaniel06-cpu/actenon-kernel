@@ -154,6 +154,13 @@ def _build_handler(wallet: Wallet) -> type[BaseHTTPRequestHandler]:
             except ValueError:
                 self._send_json(HTTPStatus.BAD_REQUEST, {"ok": False, "reason": "invalid JSON"})
                 return
+            if not isinstance(payload, dict):
+                # Syntactically valid JSON isn't necessarily an object —
+                # "[]" or "null" parse fine but would raise TypeError on
+                # payload["account_id"] below, crashing the request thread
+                # instead of returning a clean 400.
+                self._send_json(HTTPStatus.BAD_REQUEST, {"ok": False, "reason": "body must be a JSON object"})
+                return
 
             try:
                 result = wallet.credit(

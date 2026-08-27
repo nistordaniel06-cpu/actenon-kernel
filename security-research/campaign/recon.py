@@ -28,11 +28,34 @@ import ssl
 import sys
 from dataclasses import dataclass, field
 from datetime import datetime, timezone
-from urllib.request import Request, urlopen
+from typing import Any
+from urllib.request import Request, build_opener, HTTPRedirectHandler, HTTPSHandler
 from urllib.error import URLError, HTTPError
 
 CONNECT_TIMEOUT = 2.0
 HTTP_TIMEOUT = 3.0
+
+
+class _NoRedirectHandler(HTTPRedirectHandler):
+    """Never follow 3xx responses.
+
+    Without this: (1) a same-host http->https redirect (very common on
+    port 80) would record the https response as evidence for the http
+    port, misleading run_campaign.py about which port to target; (2) an
+    absolute Location header can point recon at a host that was never
+    listed in targets.json at all, which would silently violate this
+    tool's own "only ever touches configured targets" scope rule.
+    """
+
+    def redirect_request(self, req, fp, code, msg, headers, newurl):  # type: ignore[no-untyped-def]
+        return None
+
+
+def _build_opener(ssl_context: ssl.SSLContext | None):
+    handlers: list[Any] = [_NoRedirectHandler()]
+    if ssl_context is not None:
+        handlers.append(HTTPSHandler(context=ssl_context))
+    return build_opener(*handlers)
 
 
 def _build_ssl_context() -> ssl.SSLContext | None:
@@ -132,12 +155,12 @@ def _looks_like_actenon_response(path: str, body: str) -> bool:
 
 def probe_http(host: str, port: int, path: str) -> HttpProbeResult:
     last_result = HttpProbeResult(port=port, path=path, status=None, looks_like_actenon=False)
-    ssl_context = _build_ssl_context()
+    opener = _build_opener(_build_ssl_context())
     for scheme in ("http", "https"):
         url = f"{scheme}://{host}:{port}{path}"
         try:
             req = Request(url, headers={"User-Agent": "recon/1.0"}, method="GET")
-            with urlopen(req, timeout=HTTP_TIMEOUT, context=ssl_context) as resp:
+            with opener.open(req, timeout=HTTP_TIMEOUT) as resp:
                 body = resp.read(512).decode("utf-8", errors="replace")
                 looks_like_actenon = _looks_like_actenon_response(path, body)
                 return HttpProbeResult(port=port, path=path, status=resp.status, looks_like_actenon=looks_like_actenon, snippet=body[:200])
@@ -154,6 +177,13 @@ def probe_http(host: str, port: int, path: str) -> HttpProbeResult:
             last_result = HttpProbeResult(port=port, path=path, status=exc.code, looks_like_actenon=False, snippet=body[:200])
             continue
         except URLError:
+            continue
+        except TimeoutError:
+            # A service can accept the TCP connection but never send HTTP
+            # headers before the timeout — urlopen/http.client can raise a
+            # bare TimeoutError for that, which is NOT a URLError subclass.
+            # Uncaught, this would abort the whole campaign run (every open
+            # port on every target) before any report gets written.
             continue
     return last_result
 

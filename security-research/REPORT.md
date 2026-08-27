@@ -138,14 +138,28 @@ scenario 1 and 2.
 
 1. Decode it into a `PCCB` (base64url → JSON → `PCCB.from_dict`), failing
    closed on any parse error.
-2. Build the corresponding `ActionIntent`/`DynamicContextInput` from the
-   request fields (`action_type`, `action_hash`, `audience`,
-   `boundary_id`, `target`).
-3. Call `self._pccb_verifier.verify(intent, pccb, context)` and only
+2. Call `self._pccb_verifier.verify(intent, pccb, context)` and only
    return `success(...)` if it does not raise.
-4. Only fall back to a "no verifier configured" refusal
+3. Only fall back to a "no verifier configured" refusal
    (`PCCB_VERIFIER_NOT_CONFIGURED`, fail-closed) when `_pccb_verifier is
    None` — never treat "no verifier" as "any token passes."
+
+**Note on step 2's `ActionIntent`:** `PCCBVerifier.verify()` needs the
+*canonical* `ActionIntent` — the same `intent_id`, `tenant`, `requester`,
+full action `parameters`, `target`, and issuance/expiry timestamps that
+were hashed into `action_hash` at mint time (see `build_action_hash_input`
+in `actenon/proof/service.py`). `BoundaryVerificationRequest` as it exists
+today only carries a caller-provided digest and a few loose string fields
+(`action_type`, `audience` as strings, `boundary_id`) — not enough to
+reconstruct that intent. Fabricating the missing fields would let a
+verifier accept a proof for a different actual operation than the one
+being fabricated around it; copying them from the untrusted request would
+not bind the proof to anything the resource itself decided. A real fix
+therefore also needs to extend `BoundaryVerificationRequest` (or whatever
+calls into `verify_boundary()`) to carry or locally construct the
+canonical intent and context — the same way the repository's own
+reference verifier endpoint (`actenon/verifier/endpoint.py`) does it —
+not just decode the token and call `.verify()` in isolation.
 
 The in-memory `_replay_keys` set should also be replaced with (or backed
 by) the same durable `ReplayStore` the `ProtectedExecutor` path uses, so
