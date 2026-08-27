@@ -53,6 +53,7 @@ class PortResult:
 
 @dataclass
 class HttpProbeResult:
+    port: int
     path: str
     status: int | None
     looks_like_actenon: bool
@@ -72,6 +73,13 @@ class TargetReport:
     def actenon_signals(self) -> list[HttpProbeResult]:
         return [p for p in self.http_probes if p.looks_like_actenon]
 
+    def actenon_signal_ports(self) -> set[int]:
+        """Ports that showed actenon-kernel evidence — exploit modules
+        should only run against these, not every open port on the host
+        (a target can expose Actenon on one port and something unrelated
+        on another)."""
+        return {p.port for p in self.actenon_signals()}
+
 
 def check_port(host: str, port: int) -> PortResult:
     try:
@@ -81,21 +89,42 @@ def check_port(host: str, port: int) -> PortResult:
         return PortResult(port=port, open=False)
 
 
+def _looks_like_actenon_response(path: str, body: str) -> bool:
+    """Structural fingerprint for a *successful* response body only.
+
+    Only called on 2xx responses — an error page that echoes the requested
+    URL back (a common 404/diagnostics pattern) would otherwise contain
+    "actenon" merely because the probed PATH itself contains that word,
+    producing a false signal on a completely unrelated service.
+    """
+    lowered = body.lower()
+    if any(marker in lowered for marker in ("actenon", "pccb", "boundaryverifier", "key_discovery")):
+        return True
+    if path == "/wallet/balance":
+        # The bundled demo target (ctf/credit_service.py) never mentions
+        # "actenon" in its responses, but its /wallet/balance shape is
+        # distinctive enough to recognize on its own.
+        try:
+            data = json.loads(body)
+        except (ValueError, TypeError):
+            return False
+        return isinstance(data, dict) and "account_id" in data and "balance_minor" in data
+    return False
+
+
 def probe_http(host: str, port: int, path: str) -> HttpProbeResult:
-    last_result = HttpProbeResult(path=path, status=None, looks_like_actenon=False)
+    last_result = HttpProbeResult(port=port, path=path, status=None, looks_like_actenon=False)
     for scheme in ("http", "https"):
         url = f"{scheme}://{host}:{port}{path}"
         try:
             req = Request(url, headers={"User-Agent": "recon/1.0"}, method="GET")
             with urlopen(req, timeout=HTTP_TIMEOUT) as resp:
                 body = resp.read(512).decode("utf-8", errors="replace")
-                looks_like_actenon = any(
-                    marker in body.lower()
-                    for marker in ("actenon", "pccb", "boundaryverifier", "key_discovery")
-                )
-                return HttpProbeResult(path=path, status=resp.status, looks_like_actenon=looks_like_actenon, snippet=body[:200])
+                looks_like_actenon = _looks_like_actenon_response(path, body)
+                return HttpProbeResult(port=port, path=path, status=resp.status, looks_like_actenon=looks_like_actenon, snippet=body[:200])
         except HTTPError as exc:
-            # A 4xx/5xx still tells us the port speaks HTTP — but a
+            # Error responses are never treated as fingerprint evidence —
+            # see _looks_like_actenon_response's docstring — but a
             # plaintext request to a TLS-only port often surfaces as an
             # HTTPError too, so keep trying https before settling on this.
             body = ""
@@ -103,11 +132,7 @@ def probe_http(host: str, port: int, path: str) -> HttpProbeResult:
                 body = exc.read(512).decode("utf-8", errors="replace")
             except Exception:
                 pass
-            looks_like_actenon = any(
-                marker in body.lower()
-                for marker in ("actenon", "pccb", "boundaryverifier", "key_discovery")
-            )
-            last_result = HttpProbeResult(path=path, status=exc.code, looks_like_actenon=looks_like_actenon, snippet=body[:200])
+            last_result = HttpProbeResult(port=port, path=path, status=exc.code, looks_like_actenon=False, snippet=body[:200])
             continue
         except URLError:
             continue

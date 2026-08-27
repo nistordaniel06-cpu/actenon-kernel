@@ -45,12 +45,15 @@ def main() -> int:
         print(f"Open ports: {open_ports or 'none'}")
 
         target_findings = []
-        signals = recon.actenon_signals()
-        if not signals:
+        signal_ports = recon.actenon_signal_ports()
+        if not signal_ports:
             print("  no actenon-kernel signal found by recon; skipping exploit modules for "
                   "this target (inspect manually first if you believe one still applies).")
         else:
-            for port in open_ports:
+            # Only the ports that actually showed actenon evidence — a
+            # target can expose Actenon on one port and something
+            # unrelated on another open port on the same host.
+            for port in sorted(signal_ports):
                 for module in REGISTRY:
                     print(f"  running {module.NAME} against {host}:{port} ...")
                     results = module.run(name, host, port)
