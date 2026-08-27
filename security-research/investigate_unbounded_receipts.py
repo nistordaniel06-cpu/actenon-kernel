@@ -2,9 +2,15 @@
 """
 Follow-up investigation: does replaying the SAME operation_id with an
 UNSIGNED PCCB, many times, mint a FRESH, uniquely-IDed 'executed' Receipt
-each time? If a downstream ledger credits money per distinct receipt_id
-(the natural way to consume a receipt stream), this is unbounded free
-money for the attacker, not just a one-time harmless replay.
+each time? This confirms unbounded FORGED RECEIPT GENERATION with zero
+re-verification — NOT that money actually moves multiple times.
+ProtectedExecutor.execute() explicitly returns the cached payload without
+invoking the handler on this branch, so nothing here re-runs the
+money-moving side effect. Whether that translates into repeated real
+payouts depends entirely on whether some SEPARATE downstream consumer
+treats each distinct receipt_id as an independent payment instruction
+(i.e. pays out per receipt rather than per handler invocation) — this
+script does not exercise or assume such a consumer exists.
 """
 import sys
 from pathlib import Path
@@ -121,11 +127,14 @@ def main() -> int:
         if len(receipt_ids) == N and verify_calls["count"] == 1:
             print(f"[CONFIRMED] Every single forged replay minted a BRAND-NEW, uniquely-numbered")
             print(f"'executed' receipt for {amount} minor units, and proof_verifier.verify() was")
-            print(f"NEVER called again after the very first legitimate execution. A downstream")
-            print(f"ledger that credits money per distinct receipt_id (the normal way to consume")
-            print(f"a receipt stream) would pay out {N} x {amount} = {N * amount} minor units for")
-            print(f"ONE real, signature-checked authorization. This scales with however many")
-            print(f"requests the attacker is willing to send: UNBOUNDED.")
+            print(f"NEVER called again after the very first legitimate execution — unbounded")
+            print(f"forged receipt generation from a single real, signature-checked authorization,")
+            print(f"scaling with however many requests the attacker sends. This does NOT by itself")
+            print(f"mean money moved {N} times: the handler ran only once (for the legitimate")
+            print(f"execution), and every replay here returned the executor's cached payload rather")
+            print(f"than a fresh side effect. The unbounded-payout impact only materializes if a")
+            print(f"SEPARATE downstream consumer pays out per distinct receipt_id rather than per")
+            print(f"handler invocation — that consumer is not exercised or assumed here.")
             return 0
         print(f"\n[NOT CONFIRMED] Either a replay was refused, verify() was called again, or "
               f"something else changed — the idempotency-skip bug does not appear to hold here.")

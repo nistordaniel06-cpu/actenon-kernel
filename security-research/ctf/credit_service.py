@@ -54,9 +54,9 @@ STARTING_BALANCE_MINOR = 0
 
 
 class Wallet:
-    def __init__(self) -> None:
+    def __init__(self, initial_balances: dict[str, int] | None = None) -> None:
         self._lock = threading.Lock()
-        self._balances: dict[str, int] = {}
+        self._balances: dict[str, int] = dict(initial_balances or {})
         self._verifier = BoundaryVerifier()  # exactly as the README example wires it up
 
     def balance(self, account_id: str) -> int:
@@ -162,6 +162,19 @@ def _build_handler(wallet: Wallet) -> type[BaseHTTPRequestHandler]:
             try:
                 payload = json.loads(self.rfile.read(length) or b"{}")
             except ValueError:
+                # Logged too — the module docstring promises every
+                # attempt (accepted or refused) is recorded, and this is
+                # still evidence of an attempted (if malformed) request.
+                _append_ledger({
+                    "timestamp": datetime.now(timezone.utc).isoformat(),
+                    "account_id": None,
+                    "amount_minor": None,
+                    "proof_token": "",
+                    "valid": False,
+                    "reason": "invalid JSON",
+                    "refusal_code": "INVALID_JSON",
+                    "proof_id": None,
+                })
                 self._send_json(HTTPStatus.BAD_REQUEST, {"ok": False, "reason": "invalid JSON"})
                 return
             if not isinstance(payload, dict):
@@ -169,6 +182,16 @@ def _build_handler(wallet: Wallet) -> type[BaseHTTPRequestHandler]:
                 # "[]" or "null" parse fine but would raise TypeError on
                 # payload["account_id"] below, crashing the request thread
                 # instead of returning a clean 400.
+                _append_ledger({
+                    "timestamp": datetime.now(timezone.utc).isoformat(),
+                    "account_id": None,
+                    "amount_minor": None,
+                    "proof_token": "",
+                    "valid": False,
+                    "reason": "body must be a JSON object",
+                    "refusal_code": "INVALID_BODY_SHAPE",
+                    "proof_id": None,
+                })
                 self._send_json(HTTPStatus.BAD_REQUEST, {"ok": False, "reason": "body must be a JSON object"})
                 return
 
@@ -256,7 +279,23 @@ def main() -> int:
     if args.fresh and LEDGER_PATH.exists():
         LEDGER_PATH.unlink()
 
-    wallet = Wallet()
+    # Rebuild balances from the retained ledger's accepted credits on a
+    # plain restart — otherwise /wallet/ledger keeps showing successful
+    # credits (and the balance they produced) while a freshly constructed
+    # Wallet's in-memory balances start back at zero, so /wallet/balance
+    # would report the funds as having disappeared.
+    initial_balances: dict[str, int] = {}
+    if LEDGER_PATH.exists():
+        for line in LEDGER_PATH.read_text().splitlines():
+            if not line.strip():
+                continue
+            record = json.loads(line)
+            account_id = record.get("account_id")
+            amount_minor = record.get("amount_minor")
+            if record.get("valid") and isinstance(account_id, str) and isinstance(amount_minor, int):
+                initial_balances[account_id] = initial_balances.get(account_id, 0) + amount_minor
+
+    wallet = Wallet(initial_balances)
     server = ThreadingHTTPServer((args.host, args.port), _build_handler(wallet))
     print(f"[defender] Wallet/credit service listening on http://{args.host}:{args.port}")
     print(f"[defender] Transaction ledger: {LEDGER_PATH}")

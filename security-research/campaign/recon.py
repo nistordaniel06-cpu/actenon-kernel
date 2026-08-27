@@ -113,7 +113,12 @@ FINGERPRINT_PATHS = [
     "/v1/intents",
     "/v1/preflight",
     "/wallet/balance",
-    "/api/state",
+    # Deliberately NOT "/api/state": on the bundled empire_server.py demo,
+    # that GET route calls Empire.snapshot(), which runs _tick() (advances
+    # coins/heat) and _save_state() (writes to disk) as side effects — a
+    # real state mutation from what this module promises is a read-only,
+    # non-destructive probe. There's no side-effect-free fingerprint path
+    # for the Empire demo, so it's simply not auto-detected by recon.
 ]
 
 
@@ -209,9 +214,6 @@ def _looks_like_actenon_response(path: str, body: str) -> bool:
         # "actenon" in its responses, but its /wallet/balance shape is
         # distinctive enough to recognize on its own.
         return "account_id" in data and "balance_minor" in data
-    if path == "/api/state":
-        # Exploit Empire's (empire_server.py) own snapshot() shape.
-        return "mafia_level" in data and "heist_info" in data
     return False
 
 

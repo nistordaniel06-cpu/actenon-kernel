@@ -49,7 +49,16 @@ def post_json(url: str, payload: dict) -> tuple[int, dict]:
         # instead of reaching a controlled "unreachable/misconfigured"
         # result.
         with urllib.request.urlopen(req, timeout=REQUEST_TIMEOUT) as resp:
-            return resp.status, json.loads(resp.read())
+            raw = resp.read()
+            try:
+                return resp.status, json.loads(raw)
+            except ValueError:
+                # A fixed, proxied, or unrelated target can answer 2xx
+                # with an empty/HTML/non-JSON body — parse defensively
+                # here too (not just on the HTTPError path below), so
+                # this doesn't crash with a traceback before reporting a
+                # controlled non-confirmation.
+                return resp.status, {"ok": False, "reason": f"non-JSON success response: {raw[:200]!r}"}
     except urllib.error.HTTPError as exc:
         body = exc.read()
         try:

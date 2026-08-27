@@ -56,6 +56,17 @@ def main() -> int:
             # unrelated on another open port on the same host.
             for port in sorted(signal_ports):
                 for module in REGISTRY:
+                    # Honor each module's documented applicability
+                    # predicate (see exploits/__init__.py) instead of
+                    # invoking it unconditionally on every signaled port
+                    # — without this, a target's unrelated actenon
+                    # evidence could still draw a module's full set of
+                    # POST probes even when its own predicate says not to
+                    # bother.
+                    applies_if = getattr(module, "APPLIES_IF", None)
+                    if applies_if is not None and not applies_if(recon):
+                        print(f"  skipping {module.NAME} on {host}:{port} — recon signal doesn't match its applicability predicate")
+                        continue
                     print(f"  running {module.NAME} against {host}:{port} ...")
                     results = module.run(name, host, port)
                     for r in results:
