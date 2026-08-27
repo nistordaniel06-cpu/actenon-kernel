@@ -121,8 +121,15 @@ See `exploit_boundary_verifier.py` in this folder. Three demonstrations:
 3. **Contrast** — the same forged input handed to the kernel's actual
    verification path (`PCCB.from_dict` / `PCCBVerifier`) is correctly
    rejected, showing the bypass is isolated to `BoundaryVerifier` and not
-   a weakness in the core cryptographic verifier or in `ActenonGate` /
-   `ProtectedExecutor` (which do call the real verifier correctly).
+   a weakness in the core cryptographic verifier itself. This contrast
+   holds for `ActenonGate` and for `ProtectedExecutor`'s normal,
+   non-idempotent verification path — it does **not** extend to
+   `ProtectedExecutor`'s idempotency short-circuit, which is a separate
+   confirmed finding: for a repeated `operation_id` with a matching
+   `action_hash`, `execute()` returns success from cached state *before*
+   calling `proof_verifier.verify()` at all, so an unsigned PCCB is
+   accepted on that path (see `investigate_idempotency_order.py` and
+   `investigate_unbounded_receipts.py`).
 
 Run:
 

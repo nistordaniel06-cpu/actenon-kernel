@@ -164,8 +164,11 @@ def _build_handler(wallet: Wallet) -> type[BaseHTTPRequestHandler]:
 
             try:
                 account_id = str(payload["account_id"])
+                # TypeError too — int(None) (e.g. {"amount_minor": null})
+                # raises TypeError, not ValueError, and would otherwise
+                # terminate the request thread instead of returning 400.
                 amount_minor = int(payload["amount_minor"])
-            except (KeyError, ValueError) as exc:
+            except (KeyError, ValueError, TypeError) as exc:
                 self._send_json(HTTPStatus.BAD_REQUEST, {"ok": False, "reason": str(exc)})
                 return
             if amount_minor <= 0:

@@ -92,9 +92,10 @@ Output-ul confirmă `result.valid = True` pentru un token clar falsificat, atât
 `verify_boundary()` ar trebui, atunci când există un `proof_token`, să:
 
 1. Îl decodeze într-un `PCCB` (base64url → JSON → `PCCB.from_dict`), eșuând închis (fail-closed) la orice eroare de parsare.
-2. Construiască `ActionIntent`/`DynamicContextInput` corespunzător din câmpurile cererii (`action_type`, `action_hash`, `audience`, `boundary_id`, `target`).
-3. Apeleze `self._pccb_verifier.verify(intent, pccb, context)` și returneze `success(...)` doar dacă nu aruncă excepție.
-4. Să cadă pe un refuz "verificator neconfigurat" (`PCCB_VERIFIER_NOT_CONFIGURED`, fail-closed) doar când `_pccb_verifier is None` — niciodată să trateze "fără verificator" ca "orice token trece".
+2. Apeleze `self._pccb_verifier.verify(intent, pccb, context)` și returneze `success(...)` doar dacă nu aruncă excepție.
+3. Să cadă pe un refuz "verificator neconfigurat" (`PCCB_VERIFIER_NOT_CONFIGURED`, fail-closed) doar când `_pccb_verifier is None` — niciodată să trateze "fără verificator" ca "orice token trece".
+
+**Notă despre `ActionIntent`-ul de la pasul 2:** `PCCBVerifier.verify()` are nevoie de `ActionIntent`-ul *canonic* — același `intent_id`, `tenant`, `requester`, `parameters` complete ale acțiunii, `target` și timestamp-urile de emitere/expirare care au fost incluse în `action_hash` la momentul emiterii (vezi `build_action_hash_input` în `actenon/proof/service.py`). `BoundaryVerificationRequest`, așa cum există azi, poartă doar un digest oferit de apelant și câteva câmpuri de tip string (`action_type`, `audience`, `boundary_id`) — nu suficient pentru a reconstrui acel intent. Dacă am inventa câmpurile lipsă, un verificator ar putea accepta o dovadă pentru o altă operație reală decât cea din jurul căreia e fabricată; dacă le-am copia din cererea nesigură, dovada tot nu ar fi legată de nimic decis chiar de resursă. O remediere reală are deci nevoie și de extinderea `BoundaryVerificationRequest` (sau a oricărui apelant al `verify_boundary()`) ca să poarte sau să construiască local intent-ul și contextul canonice — exact așa cum face deja endpoint-ul de referință al proiectului (`actenon/verifier/endpoint.py`) — nu doar decodarea token-ului și apelarea `.verify()` izolat.
 
 Setul în memorie `_replay_keys` ar trebui de asemenea înlocuit cu (sau susținut de) același `ReplayStore` durabil folosit de traseul `ProtectedExecutor`, ca starea de replay să nu se piardă la restart și să nu fie per-instanță.
 
