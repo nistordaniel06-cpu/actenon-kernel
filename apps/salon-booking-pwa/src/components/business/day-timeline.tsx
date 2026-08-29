@@ -1,7 +1,5 @@
-import Link from "next/link";
-import { Flame } from "lucide-react";
-
-import { Barber, CalendarBooking } from "@/lib/types";
+import { Barber, Appointment, AppointmentStatus } from "@/lib/types";
+import { getService } from "@/lib/mock/services";
 import { cn, formatPrice } from "@/lib/utils";
 
 const START_HOUR = 9;
@@ -13,12 +11,22 @@ function minutesFromStart(iso: string) {
   return (d.getHours() - START_HOUR) * 60 + d.getMinutes();
 }
 
+const STATUS_STYLE: Record<AppointmentStatus, string> = {
+  confirmat: "border-transparent bg-surface-3 text-foreground",
+  "in-asteptare": "border-dashed border-warning bg-warning/10 text-warning",
+  checkin: "border-accent bg-accent-soft text-accent",
+  "in-progres": "border-transparent bg-primary text-primary-foreground",
+  finalizat: "border-transparent bg-surface-2 text-muted-foreground opacity-70",
+  anulat: "border-transparent bg-surface-2 text-muted-foreground/50 line-through opacity-50",
+  "no-show": "border-transparent bg-destructive/15 text-destructive line-through",
+};
+
 export function DayTimeline({
   barbers,
-  bookings,
+  appointments,
 }: {
   barbers: Barber[];
-  bookings: CalendarBooking[];
+  appointments: Appointment[];
 }) {
   const hours = Array.from({ length: END_HOUR - START_HOUR + 1 }, (_, i) => START_HOUR + i);
   const totalHeight = (END_HOUR - START_HOUR) * PX_PER_HOUR;
@@ -32,8 +40,7 @@ export function DayTimeline({
             className="absolute -translate-y-1/2 text-[11px] text-muted-foreground"
             style={{ top: (h - START_HOUR) * PX_PER_HOUR }}
           >
-            {h % 12 === 0 ? 12 : h % 12}
-            {h < 12 ? "am" : "pm"}
+            {h}:00
           </div>
         ))}
       </div>
@@ -42,7 +49,7 @@ export function DayTimeline({
         {barbers.map((barber) => (
           <div key={barber.id} className="flex flex-col">
             <p className="mb-2 truncate text-center text-xs font-semibold">{barber.name.split(" ")[0]}</p>
-            <div className="relative rounded-xl bg-secondary/50" style={{ height: totalHeight }}>
+            <div className="relative rounded-xl bg-surface-2/50" style={{ height: totalHeight }}>
               {hours.map((h) => (
                 <div
                   key={h}
@@ -50,45 +57,29 @@ export function DayTimeline({
                   style={{ top: (h - START_HOUR) * PX_PER_HOUR }}
                 />
               ))}
-              {bookings
-                .filter((b) => b.barberId === barber.id)
-                .map((b) => {
-                  const top = (minutesFromStart(b.startIso) / 60) * PX_PER_HOUR;
+              {appointments
+                .filter((a) => a.barberId === barber.id)
+                .map((a) => {
+                  const top = (minutesFromStart(a.startIso) / 60) * PX_PER_HOUR;
                   const height = Math.max(
                     28,
-                    ((minutesFromStart(b.endIso) - minutesFromStart(b.startIso)) / 60) * PX_PER_HOUR,
+                    ((minutesFromStart(a.endIso) - minutesFromStart(a.startIso)) / 60) * PX_PER_HOUR,
                   );
-                  const isDeal = b.status === "hot-deal";
-                  const content = (
+                  const service = getService(a.serviceId);
+                  return (
                     <div
+                      key={a.id}
                       className={cn(
                         "absolute inset-x-1 overflow-hidden rounded-lg border px-2 py-1 text-[11px] leading-tight",
-                        isDeal && "border-dashed border-accent bg-accent/10 text-accent",
-                        !isDeal && b.status === "pending" && "border-border bg-card/80 text-foreground",
-                        !isDeal && b.status === "confirmed" && "border-transparent bg-primary text-primary-foreground",
+                        STATUS_STYLE[a.status],
                       )}
                       style={{ top, height }}
                     >
-                      {isDeal ? (
-                        <span className="flex items-center gap-1 font-semibold">
-                          <Flame className="size-3" /> Open slot
-                        </span>
-                      ) : (
-                        <>
-                          <p className="truncate font-semibold">{b.clientName}</p>
-                          <p className="truncate opacity-80">
-                            {b.serviceName} · {formatPrice(b.price)}
-                          </p>
-                        </>
-                      )}
+                      <p className="truncate font-semibold">{a.clientName}</p>
+                      <p className="truncate opacity-80">
+                        {service?.name} · {formatPrice(a.price)}
+                      </p>
                     </div>
-                  );
-                  return isDeal ? (
-                    <Link key={b.id} href="/business/deals">
-                      {content}
-                    </Link>
-                  ) : (
-                    <div key={b.id}>{content}</div>
                   );
                 })}
             </div>

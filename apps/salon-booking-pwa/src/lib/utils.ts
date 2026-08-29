@@ -5,31 +5,37 @@ export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs));
 }
 
-export function formatPrice(amount: number, currency = "USD") {
-  return new Intl.NumberFormat("en-US", {
-    style: "currency",
-    currency,
-    maximumFractionDigits: 0,
-  }).format(amount);
+export function formatPrice(amount: number) {
+  return `${new Intl.NumberFormat("ro-RO", { maximumFractionDigits: 0 }).format(amount)} lei`;
 }
 
 export function formatShortTime(iso: string) {
-  return new Intl.DateTimeFormat("en-US", {
+  return new Intl.DateTimeFormat("ro-RO", {
     hour: "numeric",
-    minute: iso.endsWith("00:00.000Z") ? undefined : "2-digit",
+    minute: "2-digit",
   }).format(new Date(iso));
 }
 
 export function formatWeekday(iso: string) {
-  return new Intl.DateTimeFormat("en-US", { weekday: "short" }).format(
+  return new Intl.DateTimeFormat("ro-RO", { weekday: "short" }).format(
     new Date(iso),
   );
 }
 
 export function formatDayMonth(iso: string) {
-  return new Intl.DateTimeFormat("en-US", {
+  return new Intl.DateTimeFormat("ro-RO", {
     month: "short",
     day: "numeric",
+  }).format(new Date(iso));
+}
+
+export function formatDateTime(iso: string) {
+  return new Intl.DateTimeFormat("ro-RO", {
+    weekday: "short",
+    month: "short",
+    day: "numeric",
+    hour: "numeric",
+    minute: "2-digit",
   }).format(new Date(iso));
 }
 

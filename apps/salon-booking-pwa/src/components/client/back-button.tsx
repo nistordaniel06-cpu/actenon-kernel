@@ -14,7 +14,7 @@ export function BackButton({ className }: { className?: string }) {
         "flex size-9 items-center justify-center rounded-full bg-card/90 shadow-sm backdrop-blur",
         className,
       )}
-      aria-label="Go back"
+      aria-label="Înapoi"
     >
       <ArrowLeft className="size-4.5" />
     </button>

@@ -18,7 +18,7 @@ export function SectionHeader({
       </div>
       {href && (
         <Link href={href} className="flex items-center text-sm font-medium text-accent">
-          See all <ChevronRight className="size-4" />
+          Vezi tot <ChevronRight className="size-4" />
         </Link>
       )}
     </div>

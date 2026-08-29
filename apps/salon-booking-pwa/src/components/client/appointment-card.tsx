@@ -3,12 +3,13 @@
 import Image from "next/image";
 import Link from "next/link";
 import { useState } from "react";
-import { MapPin } from "lucide-react";
+import { MapPin, Home, CalendarPlus } from "lucide-react";
 
-import { Appointment } from "@/lib/types";
+import { Appointment, AppointmentStatus } from "@/lib/types";
 import { getSalon } from "@/lib/mock/salons";
 import { getBarber } from "@/lib/mock/barbers";
 import { getService } from "@/lib/mock/services";
+import { useAppStore } from "@/lib/store";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
@@ -20,28 +21,41 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog";
-import { formatPrice } from "@/lib/utils";
+import { ReviewForm } from "@/components/client/review-form";
+import { downloadIcs } from "@/lib/calendar";
+import { formatDateTime, formatPrice } from "@/lib/utils";
 
 export function AppointmentCard({ appointment }: { appointment: Appointment }) {
   const [cancelOpen, setCancelOpen] = useState(false);
+  const [reviewOpen, setReviewOpen] = useState(false);
+  const cancelAppointment = useAppStore((s) => s.cancelAppointment);
+  const pushToast = useAppStore((s) => s.pushToast);
+
   const salon = getSalon(appointment.salonId);
   const barber = getBarber(appointment.barberId);
   const service = getService(appointment.serviceId);
   if (!salon || !barber || !service) return null;
 
-  const date = new Intl.DateTimeFormat("en-US", {
-    weekday: "short",
-    month: "short",
-    day: "numeric",
-    hour: "numeric",
-    minute: "2-digit",
-  }).format(new Date(appointment.startIso));
+  const date = formatDateTime(appointment.startIso);
+  const isUpcoming = appointment.status === "confirmat" || appointment.status === "in-asteptare";
+
+  function addToCalendar() {
+    downloadIcs({
+      uid: `${appointment.id}`,
+      title: `${service?.name} la ${salon?.name}`,
+      description: `Programare cu ${barber?.name} pentru ${service?.name}.`,
+      location: appointment.isHomeService ? appointment.address ?? "" : salon?.address ?? "",
+      startIso: appointment.startIso,
+      endIso: appointment.endIso,
+    });
+    pushToast("Programare adăugată în calendar", "success");
+  }
 
   return (
     <div className="flex flex-col gap-3 rounded-2xl border border-border bg-card p-4">
       <div className="flex items-start justify-between gap-2">
         <div className="flex gap-3">
-          <div className="relative size-12 shrink-0 overflow-hidden rounded-xl bg-secondary">
+          <div className="relative size-12 shrink-0 overflow-hidden rounded-xl bg-surface-2">
             <Image src={salon.coverImage} alt={salon.name} fill sizes="48px" className="object-cover" />
           </div>
           <div>
@@ -58,35 +72,46 @@ export function AppointmentCard({ appointment }: { appointment: Appointment }) {
       </div>
 
       <p className="flex items-center gap-1 text-xs text-muted-foreground">
-        <MapPin className="size-3" /> {salon.address}
+        {appointment.isHomeService ? <Home className="size-3" /> : <MapPin className="size-3" />}
+        {appointment.isHomeService ? appointment.address : salon.address}
       </p>
 
-      {appointment.status === "upcoming" && (
+      {isUpcoming && (
         <div className="flex gap-2 pt-1">
-          <Link href={`/book/${salon.id}?service=${service.id}&barber=${barber.id}`} className="flex-1">
+          <Link href={`/book/${salon.id}?service=${service.id}&barber=${barber.id}&reschedule=${appointment.id}`} className="flex-1">
             <Button variant="outline" size="sm" className="w-full">
-              Reschedule
+              Reprogramează
             </Button>
           </Link>
+          <Button variant="outline" size="sm" className="flex-1 gap-1.5" onClick={addToCalendar}>
+            <CalendarPlus className="size-3.5" /> Calendar
+          </Button>
           <Dialog open={cancelOpen} onOpenChange={setCancelOpen}>
             <DialogTrigger asChild>
               <Button variant="ghost" size="sm" className="flex-1 text-destructive hover:bg-destructive/10">
-                Cancel
+                Anulează
               </Button>
             </DialogTrigger>
             <DialogContent>
               <DialogHeader>
-                <DialogTitle>Cancel this appointment?</DialogTitle>
+                <DialogTitle>Anulezi această programare?</DialogTitle>
                 <DialogDescription>
-                  Your slot at {salon.name} on {date} will be released for other clients.
+                  Locul tău la {salon.name} din {date} va fi eliberat pentru alți clienți.
                 </DialogDescription>
               </DialogHeader>
               <DialogFooter>
                 <Button variant="outline" onClick={() => setCancelOpen(false)}>
-                  Keep booking
+                  Păstrează programarea
                 </Button>
-                <Button variant="destructive" onClick={() => setCancelOpen(false)}>
-                  Cancel appointment
+                <Button
+                  variant="destructive"
+                  onClick={() => {
+                    cancelAppointment(appointment.id);
+                    setCancelOpen(false);
+                    pushToast("Programare anulată", "destructive");
+                  }}
+                >
+                  Anulează programarea
                 </Button>
               </DialogFooter>
             </DialogContent>
@@ -94,10 +119,25 @@ export function AppointmentCard({ appointment }: { appointment: Appointment }) {
         </div>
       )}
 
-      {appointment.status === "completed" && (
+      {appointment.status === "finalizat" && !appointment.reviewed && (
+        <>
+          <Button size="sm" className="w-full" onClick={() => setReviewOpen(true)}>
+            Lasă un review
+          </Button>
+          <ReviewForm
+            open={reviewOpen}
+            onOpenChange={setReviewOpen}
+            appointment={appointment}
+            salonName={salon.name}
+            serviceName={service.name}
+          />
+        </>
+      )}
+
+      {appointment.status === "finalizat" && appointment.reviewed && (
         <Link href={`/salon/${salon.id}`}>
           <Button variant="outline" size="sm" className="w-full">
-            Book again
+            Rezervă din nou
           </Button>
         </Link>
       )}
@@ -105,8 +145,12 @@ export function AppointmentCard({ appointment }: { appointment: Appointment }) {
   );
 }
 
-function StatusBadge({ status }: { status: Appointment["status"] }) {
-  if (status === "upcoming") return <Badge variant="success">Upcoming</Badge>;
-  if (status === "cancelled") return <Badge variant="destructive">Cancelled</Badge>;
-  return <Badge variant="secondary">Completed</Badge>;
+function StatusBadge({ status }: { status: AppointmentStatus }) {
+  if (status === "confirmat") return <Badge variant="success">Confirmată</Badge>;
+  if (status === "in-asteptare") return <Badge variant="secondary">În așteptare</Badge>;
+  if (status === "checkin") return <Badge variant="soft">Check-in</Badge>;
+  if (status === "in-progres") return <Badge variant="soft">În desfășurare</Badge>;
+  if (status === "anulat") return <Badge variant="destructive">Anulată</Badge>;
+  if (status === "no-show") return <Badge variant="destructive">Neprezentare</Badge>;
+  return <Badge variant="secondary">Finalizată</Badge>;
 }

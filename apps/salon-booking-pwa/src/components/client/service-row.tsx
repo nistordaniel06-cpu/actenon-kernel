@@ -22,7 +22,7 @@ export function ServiceRow({ service, salonId }: { service: Service; salonId: st
           href={`/book/${salonId}?service=${service.id}`}
           className="rounded-full border border-border px-3 py-1 text-xs font-semibold active:bg-secondary"
         >
-          Book
+          Rezervă
         </Link>
       </div>
     </div>

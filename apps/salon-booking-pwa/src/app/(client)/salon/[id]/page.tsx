@@ -4,7 +4,6 @@ import { MapPin, Flame } from "lucide-react";
 
 import { getSalon } from "@/lib/mock/salons";
 import { getBarbersForSalon } from "@/lib/mock/barbers";
-import { getReviewsForSalon } from "@/lib/mock/reviews";
 import { getDealsForSalon } from "@/lib/mock/deals";
 import { getService } from "@/lib/mock/services";
 import { SalonGallery } from "@/components/client/salon-gallery";
@@ -12,7 +11,7 @@ import { Rating } from "@/components/client/rating";
 import { PriceLevel } from "@/components/client/price-level";
 import { ServiceRow } from "@/components/client/service-row";
 import { BarberRow } from "@/components/client/barber-row";
-import { ReviewRow } from "@/components/client/review-row";
+import { SalonReviews } from "./salon-reviews";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { formatPrice } from "@/lib/utils";
@@ -23,7 +22,6 @@ export default async function SalonProfilePage({ params }: PageProps<"/salon/[id
   if (!salon) notFound();
 
   const barbers = getBarbersForSalon(salon.id);
-  const reviews = getReviewsForSalon(salon.id);
   const dealsForSalon = getDealsForSalon(salon.id);
 
   return (
@@ -39,14 +37,14 @@ export default async function SalonProfilePage({ params }: PageProps<"/salon/[id
           <div className="mt-1 flex flex-wrap items-center gap-2 text-sm text-muted-foreground">
             <Rating value={salon.rating} count={salon.reviewCount} size="md" />
             <span aria-hidden>·</span>
-            <span className="capitalize">{salon.type}</span>
+            <span>{salon.type === "barbershop" ? "Frizerie" : "Salon"}</span>
             <span aria-hidden>·</span>
             <span className="inline-flex items-center gap-1">
               <MapPin className="size-3.5" /> {salon.distanceKm.toFixed(1)} km
             </span>
           </div>
           <p className="mt-1 text-sm text-muted-foreground">
-            {salon.address} · Open until {salon.openNowUntil}
+            {salon.address} · Deschis până la {salon.openNowUntil}
           </p>
         </div>
 
@@ -59,9 +57,9 @@ export default async function SalonProfilePage({ params }: PageProps<"/salon/[id
         </div>
 
         {dealsForSalon.length > 0 && (
-          <div className="flex flex-col gap-2 rounded-2xl border border-accent/30 bg-accent/10 p-3.5">
+          <div className="flex flex-col gap-2 rounded-2xl border border-accent/30 bg-accent-soft p-3.5">
             <p className="flex items-center gap-1.5 text-sm font-semibold text-accent">
-              <Flame className="size-4" /> Hot deals here
+              <Flame className="size-4" /> Oferte de ultim moment aici
             </p>
             {dealsForSalon.map((deal) => {
               const service = getService(deal.serviceId);
@@ -88,9 +86,9 @@ export default async function SalonProfilePage({ params }: PageProps<"/salon/[id
 
         <Tabs defaultValue="services">
           <TabsList className="w-full">
-            <TabsTrigger value="services">Services</TabsTrigger>
-            <TabsTrigger value="team">Team</TabsTrigger>
-            <TabsTrigger value="reviews">Reviews</TabsTrigger>
+            <TabsTrigger value="services">Servicii</TabsTrigger>
+            <TabsTrigger value="team">Echipă</TabsTrigger>
+            <TabsTrigger value="reviews">Recenzii</TabsTrigger>
           </TabsList>
           <TabsContent value="services">
             <div className="flex flex-col">
@@ -107,15 +105,7 @@ export default async function SalonProfilePage({ params }: PageProps<"/salon/[id
             </div>
           </TabsContent>
           <TabsContent value="reviews">
-            {reviews.length === 0 ? (
-              <p className="py-6 text-center text-sm text-muted-foreground">No reviews yet.</p>
-            ) : (
-              <div className="flex flex-col">
-                {reviews.map((review) => (
-                  <ReviewRow key={review.id} review={review} />
-                ))}
-              </div>
-            )}
+            <SalonReviews salonId={salon.id} />
           </TabsContent>
         </Tabs>
       </div>
@@ -125,7 +115,7 @@ export default async function SalonProfilePage({ params }: PageProps<"/salon/[id
           href={`/book/${salon.id}`}
           className="w-full rounded-full bg-primary py-3.5 text-center font-semibold text-primary-foreground shadow-lg"
         >
-          Book appointment
+          Rezervă programare
         </Link>
       </div>
     </div>

@@ -1,43 +1,55 @@
-# NearCut — Salon & Barbershop Booking PWA
+# NearCut — Platformă premium de programări pentru frizerii și saloane
 
-A mobile-first PWA for booking barbers and salons, inspired by Uber and
-Stailer: find nearby places, see who's available now, and book in three
-taps. Includes a companion business dashboard for barbers/salons to manage
-their calendar, services, hot deals, clients, and stats.
+O aplicație PWA mobile-first pentru rezervarea la frizerii și saloane, cu trei
+roluri complete: **client**, **frizer** și **administrator de salon** (Salon
+Pro). Temă premium negru + verde lime, conținut și formate în limba română.
 
-This app lives at `apps/salon-booking-pwa/` inside the `actenon-kernel`
-repository as a standalone Next.js project; it does not depend on, and is
-not depended on by, the Actenon Kernel Python package in the rest of this
-repo.
+Acest MVP trăiește la `apps/salon-booking-pwa/` în interiorul repository-ului
+`actenon-kernel`; e un proiect Next.js de sine stătător, complet independent
+de pachetul Python Actenon Kernel din restul repo-ului.
 
 ## Status
 
-This is phase 1: a fully navigable UI backed by polished mock data (no
-backend yet), as requested. Phase 2 will wire up Supabase (Auth, Postgres,
-Storage), real-time availability, Google Calendar sync, and ICS export.
+MVP complet navigabil pe date mock, cu toate acțiunile principale funcționale
+(nu doar ecrane statice): o programare făcută de client apare instant în
+"Programările mele" și în agenda frizerului, anularea/reprogramarea
+actualizează starea reală, roata zilnică, review-urile și magazinul au
+interacțiuni reale, iar Salon Pro vede calendarul echipei și indicatorii la
+zi. Backend-ul real (Supabase, sincronizare calendar) este următoarea etapă.
 
 ## Stack
 
 - Next.js (App Router) + TypeScript
-- Tailwind CSS v4 + shadcn/ui-style components (Radix primitives)
-- Lucide icons
-- Recharts for business stats
-- Supabase client libraries installed and ready to wire up (`@supabase/supabase-js`, `@supabase/ssr`)
+- Tailwind CSS v4 + componente stil shadcn/ui (Radix UI)
+- Zustand pentru starea mock partajată între roluri (programări, puncte, boost-uri, review-uri)
+- React Hook Form + Zod (formularul de Boost)
+- Framer Motion (animația roții zilnice)
+- Lucide React pentru iconițe
+- Recharts pentru statistici
+- date-fns instalat, formatele curente folosesc `Intl` cu locale `ro-RO`
+- Supabase client libraries instalate, pregătite pentru etapa următoare
 
-## Structure
+## Structură
 
-- `src/app/(client)/` — client-facing app: home, explore (map/list), salon
-  profile, booking flow, appointments, rewards, profile
-- `src/app/business/` — business dashboard: calendar, services, hot deals,
-  clients, stats, profile & portfolio
-- `src/lib/mock/` — mock data (salons, barbers, services, deals, reviews,
-  rewards, business clients/bookings/stats)
-- `src/lib/calendar.ts` — Google Calendar link + `.ics` file generation
-  helpers, already used by the booking confirmation screen
-- `src/components/ui/` — shadcn-style primitives
-- `src/components/client/`, `src/components/business/` — feature components
+- `src/app/page.tsx` — ecranul de bun venit (alegere rol + login demo)
+- `src/app/(client)/` — aplicația client: acasă, descoperă (hartă/listă),
+  cerere rapidă, profil salon, rezervare (3 pași + la domiciliu), programările
+  mele, Style Passport, portofel (ranguri + roata zilnică), comunitate, magazin, profil
+- `src/app/barber/` — rolul Frizer: agenda zilei (check-in / început /
+  finalizare / neprezentare), clienți, Boost oră liberă, portofoliu, recenzii
+- `src/app/salon-pro/` — rolul Salon Pro: dashboard, calendar echipă,
+  clienți, personal & procente, servicii, campanii & stoc, rapoarte
+  (placeholder), mod tabletă check-in — sidebar pe tabletă/desktop, bottom
+  nav pe mobil
+- `src/lib/store.ts` — starea Zustand partajată (persistă în localStorage)
+- `src/lib/mock/` — date mock: 4 saloane din București, 8 frizeri, 12
+  servicii, disponibilitate pe 7 zile, programări viitoare/istoric, 8
+  produse, review-uri, ranguri, campanii
+- `src/lib/calendar.ts` — link Google Calendar + generare `.ics`
+- `src/components/ui/` — primitive stil shadcn
+- `src/components/client/`, `src/components/barber/`, `src/components/salon-pro/`, `src/components/shared/` — componente pe rol
 
-## Getting started
+## Instalare și rulare
 
 ```bash
 cd apps/salon-booking-pwa
@@ -45,17 +57,31 @@ npm install
 npm run dev
 ```
 
-Open http://localhost:3000 for the client app, and
-http://localhost:3000/business for the business dashboard (also reachable
-from the client Profile screen via "I'm a barber or salon owner").
+Deschide http://localhost:3000 — ecranul de bun venit. Alege un rol (fără
+autentificare reală în această etapă — orice buton te duce direct în demo):
 
-## Next steps (phase 2)
+- **Sunt client** → `/home`
+- **Sunt frizer** → `/barber`
+- **Administrez un salon** → `/salon-pro`
 
-- Supabase Auth (client + business accounts) and Postgres schema for
-  salons, barbers, services, bookings, reviews, rewards
-- Real-time availability + booking writes with no double-booking
-  (unique constraint / transaction on barber+slot)
-- Google Calendar API sync for barbers; the client already generates
-  Google Calendar links and downloadable `.ics` files for clients
-- Supabase Storage for salon/portfolio photos
-- Stripe (or similar) for barber/salon subscriptions and boosts
+Poți schimba rolul oricând din ecranul Profil.
+
+## Verificări
+
+```bash
+npm run lint
+npx tsc --noEmit
+npm run build
+```
+
+Toate trec fără erori la ultima verificare (29 rute compilate).
+
+## Următoarea etapă (Supabase)
+
+- Autentificare reală (telefon / Apple) cu Supabase Auth
+- Schema Postgres pentru saloane, frizeri, servicii, programări, review-uri, puncte
+- Scriere programări în timp real, fără suprapuneri (constrângere unică pe frizer + interval)
+- Sincronizare reală cu Google Calendar API pentru frizeri (link-ul Google Calendar
+  și fișierul `.ics` pentru client sunt deja generate în flux)
+- Supabase Storage pentru fotografiile de portofoliu
+- Facturare/abonament pentru Salon Pro (secțiunea Rapoarte e pregătită ca placeholder)

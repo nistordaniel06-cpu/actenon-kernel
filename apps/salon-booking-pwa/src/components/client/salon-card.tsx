@@ -13,11 +13,11 @@ export function SalonCard({ salon, className }: { salon: Salon; className?: stri
     <Link
       href={`/salon/${salon.id}`}
       className={cn(
-        "flex gap-3 rounded-2xl p-2 transition-colors active:bg-secondary/60",
+        "flex gap-3 rounded-2xl p-2 transition-colors active:bg-surface-2",
         className,
       )}
     >
-      <div className="relative size-24 shrink-0 overflow-hidden rounded-xl bg-secondary">
+      <div className="relative size-24 shrink-0 overflow-hidden rounded-xl bg-surface-2">
         <Image
           src={salon.coverImage}
           alt={salon.name}
@@ -28,7 +28,7 @@ export function SalonCard({ salon, className }: { salon: Salon; className?: stri
         {salon.hasHotDeal && (
           <span className="absolute left-1 top-1 flex items-center gap-0.5 rounded-full bg-accent px-1.5 py-0.5 text-[10px] font-semibold text-accent-foreground">
             <Flame className="size-2.5" />
-            Deal
+            Ofertă
           </span>
         )}
       </div>
@@ -45,12 +45,12 @@ export function SalonCard({ salon, className }: { salon: Salon; className?: stri
         <div className="flex flex-wrap items-center gap-1.5">
           {salon.availableNow ? (
             <Badge variant="success" className="gap-1">
-              <span className="size-1.5 rounded-full bg-success" /> Available now
+              <span className="size-1.5 rounded-full bg-success" /> Liber acum
             </Badge>
           ) : (
             <span className="inline-flex items-center gap-1 text-xs text-muted-foreground">
               <Clock className="size-3" />
-              Next {new Intl.DateTimeFormat("en-US", { hour: "numeric", minute: "2-digit" }).format(new Date(salon.nextAvailableIso))}
+              Următor: {new Intl.DateTimeFormat("ro-RO", { hour: "numeric", minute: "2-digit" }).format(new Date(salon.nextAvailableIso))}
             </span>
           )}
         </div>
