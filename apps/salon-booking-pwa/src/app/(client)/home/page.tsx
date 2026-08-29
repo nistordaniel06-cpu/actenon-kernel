@@ -1,8 +1,9 @@
 "use client";
 
+import { useState } from "react";
 import Link from "next/link";
 import Image from "next/image";
-import { MapPin, Search, Bell, ChevronDown, ChevronRight, Sliders, ShoppingBag } from "lucide-react";
+import { MapPin, Search, Bell, ChevronDown, ChevronRight, Sliders, ShoppingBag, Check } from "lucide-react";
 
 import { salons, getSalon } from "@/lib/mock/salons";
 import { barbers, getBarber } from "@/lib/mock/barbers";
@@ -17,12 +18,24 @@ import { SalonCard } from "@/components/client/salon-card";
 import { SectionHeader } from "@/components/client/section-header";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
+import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { formatPrice, initials } from "@/lib/utils";
+
+const BUCHAREST_AREAS = [
+  "Sector 1, București",
+  "Sector 2, București",
+  "Sector 3, București",
+  "Sector 4, București",
+  "Sector 5, București",
+  "Sector 6, București",
+];
 
 export default function HomePage() {
   const availableBarbers = barbers.filter((b) => b.availableNow).slice(0, 6);
   const nearby = [...salons].sort((a, b) => a.distanceKm - b.distanceKm);
   const firstName = currentUser.name.split(" ")[0];
+  const [area, setArea] = useState(BUCHAREST_AREAS[0]);
+  const [areaOpen, setAreaOpen] = useState(false);
 
   const appointments = useAppStore((s) => s.appointments);
   const nextAppt = appointments
@@ -34,9 +47,12 @@ export default function HomePage() {
       <header className="flex items-center justify-between px-5 pt-2">
         <div>
           <p className="text-xs text-muted-foreground">Bine ai revenit, {firstName}</p>
-          <button className="mt-0.5 flex items-center gap-1 text-sm font-semibold">
+          <button
+            onClick={() => setAreaOpen(true)}
+            className="mt-0.5 flex items-center gap-1 text-sm font-semibold"
+          >
             <MapPin className="size-4 text-accent" />
-            Sector 1, București
+            {area}
             <ChevronDown className="size-3.5 text-muted-foreground" />
           </button>
         </div>
@@ -158,6 +174,29 @@ export default function HomePage() {
           </Button>
         </Link>
       </section>
+
+      <Sheet open={areaOpen} onOpenChange={setAreaOpen}>
+        <SheetContent side="bottom">
+          <SheetHeader>
+            <SheetTitle>Alege zona ta</SheetTitle>
+          </SheetHeader>
+          <div className="flex flex-col gap-1 px-5 pb-6">
+            {BUCHAREST_AREAS.map((a) => (
+              <button
+                key={a}
+                onClick={() => {
+                  setArea(a);
+                  setAreaOpen(false);
+                }}
+                className="flex items-center justify-between rounded-xl px-3 py-3 text-left text-sm font-medium hover:bg-surface-2"
+              >
+                {a}
+                {a === area && <Check className="size-4 text-accent" />}
+              </button>
+            ))}
+          </div>
+        </SheetContent>
+      </Sheet>
     </div>
   );
 }

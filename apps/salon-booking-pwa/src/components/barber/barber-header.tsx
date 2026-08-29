@@ -1,9 +1,9 @@
 import Link from "next/link";
-import { Bell } from "lucide-react";
 
 import { getBarber } from "@/lib/mock/barbers";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
+import { NotificationBell } from "@/components/shared/notification-bell";
 import { initials } from "@/lib/utils";
 
 export function BarberHeader({
@@ -24,10 +24,7 @@ export function BarberHeader({
         {subtitle && <p className="text-sm text-muted-foreground">{subtitle}</p>}
       </div>
       <div className="flex items-center gap-3">
-        <button className="relative flex size-9 items-center justify-center rounded-full bg-surface-2">
-          <Bell className="size-4.5" />
-          <span className="absolute right-1.5 top-1.5 size-1.5 rounded-full bg-accent" />
-        </button>
+        <NotificationBell />
         <Link href="/barber/portfolio">
           <Avatar className="size-9">
             {barber && <AvatarImage src={barber.avatar} alt={barber.name} />}

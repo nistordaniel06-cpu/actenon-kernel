@@ -188,14 +188,3 @@ export interface StatPoint {
   bookings: number;
 }
 
-export interface CalendarBooking {
-  id: string;
-  clientName: string;
-  clientAvatar: string;
-  serviceName: string;
-  barberId: string;
-  startIso: string;
-  endIso: string;
-  status: "confirmed" | "pending" | "hot-deal";
-  price: number;
-}

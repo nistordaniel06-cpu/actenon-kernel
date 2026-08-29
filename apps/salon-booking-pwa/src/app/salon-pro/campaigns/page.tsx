@@ -6,9 +6,18 @@ import { Flame, Gift, Package, X } from "lucide-react";
 import { getDealsForSalon } from "@/lib/mock/deals";
 import { myBusinessSalon } from "@/lib/mock/business-context";
 import { shopProducts } from "@/lib/mock/shop";
+import { useAppStore } from "@/lib/store";
 import { BusinessHeader } from "@/components/business/business-header";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import { formatPrice } from "@/lib/utils";
 
 const STOCK = [18, 6, 24, 11, 3, 4, 2, 30];
@@ -19,10 +28,16 @@ export default function CampaignsPage() {
   const initialDeals = getDealsForSalon(myBusinessSalon.id);
   const [activeDeals, setActiveDeals] = useState(initialDeals);
   const [discount, setDiscount] = useState(20);
+  const [pendingRemoveId, setPendingRemoveId] = useState<string | null>(null);
+  const pushToast = useAppStore((s) => s.pushToast);
 
   function removeDeal(id: string) {
     setActiveDeals((prev) => prev.filter((d) => d.id !== id));
+    setPendingRemoveId(null);
+    pushToast("Ofertă oprită.", "success");
   }
+
+  const pendingDeal = activeDeals.find((d) => d.id === pendingRemoveId) ?? null;
 
   return (
     <div className="flex flex-col gap-6">
@@ -43,7 +58,7 @@ export default function CampaignsPage() {
                 <p className="truncate font-medium text-accent">{deal.title}</p>
                 <p className="text-xs text-muted-foreground">-{deal.discountPercent}% · {deal.seatsLeft} loc rămas</p>
               </div>
-              <button onClick={() => removeDeal(deal.id)} className="flex size-8 shrink-0 items-center justify-center rounded-full bg-card">
+              <button onClick={() => setPendingRemoveId(deal.id)} className="flex size-8 shrink-0 items-center justify-center rounded-full bg-card">
                 <X className="size-4" />
               </button>
             </div>
@@ -111,6 +126,25 @@ export default function CampaignsPage() {
           ))}
         </div>
       </div>
+
+      <Dialog open={!!pendingDeal} onOpenChange={(open) => !open && setPendingRemoveId(null)}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Oprești această ofertă?</DialogTitle>
+            <DialogDescription>
+              {pendingDeal?.title} nu va mai fi vizibilă clienților.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setPendingRemoveId(null)}>
+              Renunță
+            </Button>
+            <Button variant="destructive" onClick={() => pendingDeal && removeDeal(pendingDeal.id)}>
+              Oprește oferta
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

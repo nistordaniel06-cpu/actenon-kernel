@@ -23,24 +23,24 @@ import { TierBadge } from "@/components/client/tier-badge";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { initials } from "@/lib/utils";
 
-const menuGroups: { title: string; items: { icon: typeof User; label: string }[] }[] = [
+const menuGroups: { title: string; items: { icon: typeof User; label: string; message: string }[] }[] = [
   {
     title: "Cont",
     items: [
-      { icon: User, label: "Editează profilul" },
-      { icon: CreditCard, label: "Metode de plată" },
-      { icon: Bell, label: "Notificări" },
+      { icon: User, label: "Editează profilul", message: "Editarea profilului va fi disponibilă după conectarea contului real." },
+      { icon: CreditCard, label: "Metode de plată", message: "Adăugarea unui card va fi disponibilă la plata online." },
+      { icon: Bell, label: "Notificări", message: "Nu ai notificări noi." },
     ],
   },
   {
     title: "Calendar",
-    items: [{ icon: CalendarSync, label: "Sincronizare Google & Apple Calendar" }],
+    items: [{ icon: CalendarSync, label: "Sincronizare Google & Apple Calendar", message: "Sincronizarea automată se activează în etapa următoare — până atunci, adaugă fiecare programare manual din \"Programările mele\"." }],
   },
   {
     title: "Suport",
     items: [
-      { icon: ShieldCheck, label: "Confidențialitate și securitate" },
-      { icon: HelpCircle, label: "Centru de ajutor" },
+      { icon: ShieldCheck, label: "Confidențialitate și securitate", message: "Politica de confidențialitate va fi publicată aici." },
+      { icon: HelpCircle, label: "Centru de ajutor", message: "Scrie-ne la contact@nearcut.ro pentru orice întrebare." },
     ],
   },
 ];
@@ -49,6 +49,7 @@ export default function ProfilePage() {
   const router = useRouter();
   const points = useAppStore((s) => s.points);
   const setRole = useAppStore((s) => s.setRole);
+  const pushToast = useAppStore((s) => s.pushToast);
   const rank = rankForPoints(points);
 
   function switchRole(role: Role, href: string) {
@@ -124,9 +125,10 @@ export default function ProfilePage() {
             {group.title}
           </h2>
           <div className="flex flex-col rounded-2xl border border-border bg-card px-4">
-            {group.items.map(({ icon: Icon, label }) => (
+            {group.items.map(({ icon: Icon, label, message }) => (
               <button
                 key={label}
+                onClick={() => pushToast(message)}
                 className="flex items-center gap-3 border-b border-border/70 py-3.5 text-left last:border-0"
               >
                 <Icon className="size-4.5 text-muted-foreground" />

@@ -3,9 +3,11 @@
 import { useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { Camera, Eye, LogOut, Plus, User } from "lucide-react";
 
 import { Salon } from "@/lib/types";
+import { useAppStore } from "@/lib/store";
 import { BackButton } from "@/components/client/back-button";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
@@ -20,6 +22,8 @@ const hours = [
 ];
 
 export function BusinessProfileClient({ salon }: { salon: Salon }) {
+  const router = useRouter();
+  const pushToast = useAppStore((s) => s.pushToast);
   const [name, setName] = useState(salon.name);
   const [bio, setBio] = useState(
     "Tunsori de precizie și frizerie clasică în inima orașului. Acceptăm și clienți fără programare, dar rezervarea în avans îți garantează scaunul preferat.",
@@ -30,7 +34,10 @@ export function BusinessProfileClient({ salon }: { salon: Salon }) {
       <div className="relative h-40 w-full bg-surface-2">
         <Image src={salon.coverImage} alt={salon.name} fill priority sizes="100vw" className="object-cover" />
         <BackButton className="absolute left-3 top-[max(env(safe-area-inset-top),0.75rem)]" />
-        <button className="absolute right-3 top-[max(env(safe-area-inset-top),0.75rem)] flex items-center gap-1.5 rounded-full bg-card/90 px-3 py-1.5 text-xs font-semibold shadow-sm backdrop-blur">
+        <button
+          onClick={() => pushToast("Încărcarea fotografiilor va fi disponibilă după conectarea Supabase Storage.")}
+          className="absolute right-3 top-[max(env(safe-area-inset-top),0.75rem)] flex items-center gap-1.5 rounded-full bg-card/90 px-3 py-1.5 text-xs font-semibold shadow-sm backdrop-blur"
+        >
           <Camera className="size-3.5" /> Schimbă coperta
         </button>
         <div className="absolute -bottom-8 left-5 size-16 overflow-hidden rounded-2xl border-4 border-background bg-card">
@@ -60,7 +67,10 @@ export function BusinessProfileClient({ salon }: { salon: Salon }) {
                 <Image src={src} alt="Portofoliu" fill sizes="33vw" className="object-cover" />
               </div>
             ))}
-            <button className="flex aspect-square items-center justify-center rounded-xl border-2 border-dashed border-border text-muted-foreground">
+            <button
+              onClick={() => pushToast("Încărcarea fotografiilor va fi disponibilă după conectarea Supabase Storage.")}
+              className="flex aspect-square items-center justify-center rounded-xl border-2 border-dashed border-border text-muted-foreground"
+            >
               <Plus className="size-5" />
             </button>
           </div>
@@ -78,7 +88,9 @@ export function BusinessProfileClient({ salon }: { salon: Salon }) {
           </div>
         </div>
 
-        <Button className="w-full">Salvează modificările</Button>
+        <Button className="w-full" onClick={() => pushToast("Modificările au fost salvate.", "success")}>
+          Salvează modificările
+        </Button>
 
         <Link href={`/salon/${salon.id}`}>
           <Button variant="outline" className="w-full gap-2">
@@ -92,7 +104,10 @@ export function BusinessProfileClient({ salon }: { salon: Salon }) {
           </Button>
         </Link>
 
-        <button className="flex items-center justify-center gap-2 rounded-2xl border border-destructive/30 py-3.5 text-sm font-semibold text-destructive">
+        <button
+          onClick={() => router.push("/")}
+          className="flex items-center justify-center gap-2 rounded-2xl border border-destructive/30 py-3.5 text-sm font-semibold text-destructive"
+        >
           <LogOut className="size-4" /> Deconectare
         </button>
       </div>

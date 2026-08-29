@@ -139,7 +139,14 @@ export default function BoostPage() {
                 <p className="text-sm font-medium">-{b.discountPercent}% · {b.radiusKm} km · {formatPrice(b.budgetLei)}</p>
                 <p className="text-xs text-muted-foreground">{b.channels.join(", ")}</p>
               </div>
-              <button onClick={() => toggleBoost(b.id)} className="flex size-8 items-center justify-center rounded-full bg-surface-2">
+              <button
+                onClick={() => {
+                  toggleBoost(b.id);
+                  pushToast(b.active ? "Boost oprit." : "Boost repornit.", "success");
+                }}
+                className="flex size-8 items-center justify-center rounded-full bg-surface-2"
+                aria-label={b.active ? "Oprește boost-ul" : "Repornește boost-ul"}
+              >
                 <X className="size-4" />
               </button>
             </div>

@@ -4,6 +4,7 @@ import { useState } from "react";
 import { Pencil, Plus, Clock } from "lucide-react";
 
 import { Service, ServiceCategory } from "@/lib/types";
+import { useAppStore } from "@/lib/store";
 import { Switch } from "@/components/ui/switch";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -27,35 +28,65 @@ const CATEGORY_LABELS: Record<ServiceCategory, string> = {
   combo: "Pachete",
 };
 
+type EditableService = Service & { active: boolean };
+
+const emptyDraft = { name: "", price: "", durationMin: "" };
+
 export function ServicesClient({ initialServices }: { initialServices: Service[] }) {
-  const [services, setServices] = useState(
+  const pushToast = useAppStore((s) => s.pushToast);
+  const [services, setServices] = useState<EditableService[]>(
     initialServices.map((s) => ({ ...s, active: true })),
   );
-  const [addOpen, setAddOpen] = useState(false);
-  const [draft, setDraft] = useState({ name: "", price: "", durationMin: "" });
+  const [dialogOpen, setDialogOpen] = useState(false);
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [draft, setDraft] = useState(emptyDraft);
 
   function toggle(id: string) {
     setServices((prev) => prev.map((s) => (s.id === id ? { ...s, active: !s.active } : s)));
   }
 
-  function addService() {
-    if (!draft.name || !draft.price || !draft.durationMin) return;
-    setServices((prev) => [
-      ...prev,
-      {
-        id: `svc-custom-${prev.length + 1}`,
-        name: draft.name,
-        category: "hair",
-        price: Number(draft.price),
-        durationMin: Number(draft.durationMin),
-        active: true,
-      },
-    ]);
-    setDraft({ name: "", price: "", durationMin: "" });
-    setAddOpen(false);
+  function openAdd() {
+    setEditingId(null);
+    setDraft(emptyDraft);
+    setDialogOpen(true);
   }
 
-  const grouped = services.reduce<Record<string, typeof services>>((acc, s) => {
+  function openEdit(service: EditableService) {
+    setEditingId(service.id);
+    setDraft({ name: service.name, price: String(service.price), durationMin: String(service.durationMin) });
+    setDialogOpen(true);
+  }
+
+  function saveDraft() {
+    if (!draft.name || !draft.price || !draft.durationMin) return;
+    if (editingId) {
+      setServices((prev) =>
+        prev.map((s) =>
+          s.id === editingId
+            ? { ...s, name: draft.name, price: Number(draft.price), durationMin: Number(draft.durationMin) }
+            : s,
+        ),
+      );
+      pushToast("Serviciu actualizat.", "success");
+    } else {
+      setServices((prev) => [
+        ...prev,
+        {
+          id: `svc-custom-${prev.length + 1}`,
+          name: draft.name,
+          category: "hair",
+          price: Number(draft.price),
+          durationMin: Number(draft.durationMin),
+          active: true,
+        },
+      ]);
+      pushToast("Serviciu adăugat.", "success");
+    }
+    setDraft(emptyDraft);
+    setDialogOpen(false);
+  }
+
+  const grouped = services.reduce<Record<string, EditableService[]>>((acc, s) => {
     (acc[s.category] ??= []).push(s);
     return acc;
   }, {});
@@ -67,15 +98,15 @@ export function ServicesClient({ initialServices }: { initialServices: Service[]
           <h1 className="text-xl font-semibold">Servicii & prețuri</h1>
           <p className="text-sm text-muted-foreground">{services.filter((s) => s.active).length} servicii active</p>
         </div>
-        <Dialog open={addOpen} onOpenChange={setAddOpen}>
+        <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
           <DialogTrigger asChild>
-            <Button size="sm" className="gap-1.5">
+            <Button size="sm" className="gap-1.5" onClick={openAdd}>
               <Plus className="size-4" /> Adaugă
             </Button>
           </DialogTrigger>
           <DialogContent>
             <DialogHeader>
-              <DialogTitle>Serviciu nou</DialogTitle>
+              <DialogTitle>{editingId ? "Editează serviciul" : "Serviciu nou"}</DialogTitle>
             </DialogHeader>
             <div className="flex flex-col gap-3">
               <div className="flex flex-col gap-1.5">
@@ -106,10 +137,10 @@ export function ServicesClient({ initialServices }: { initialServices: Service[]
               </div>
             </div>
             <DialogFooter>
-              <Button variant="outline" onClick={() => setAddOpen(false)}>
+              <Button variant="outline" onClick={() => setDialogOpen(false)}>
                 Anulează
               </Button>
-              <Button onClick={addService}>Salvează serviciul</Button>
+              <Button onClick={saveDraft}>{editingId ? "Salvează modificările" : "Salvează serviciul"}</Button>
             </DialogFooter>
           </DialogContent>
         </Dialog>
@@ -135,7 +166,11 @@ export function ServicesClient({ initialServices }: { initialServices: Service[]
                     <span>{formatPrice(s.price)}</span>
                   </p>
                 </div>
-                <button className="rounded-full p-1.5 text-muted-foreground hover:bg-surface-2">
+                <button
+                  onClick={() => openEdit(s)}
+                  className="rounded-full p-1.5 text-muted-foreground hover:bg-surface-2"
+                  aria-label={`Editează ${s.name}`}
+                >
                   <Pencil className="size-3.5" />
                 </button>
                 <Switch checked={s.active} onCheckedChange={() => toggle(s.id)} />

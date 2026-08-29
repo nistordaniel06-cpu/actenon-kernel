@@ -1,9 +1,9 @@
 import Link from "next/link";
-import { Bell } from "lucide-react";
 
 import { myBusinessSalon } from "@/lib/mock/business-context";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
+import { NotificationBell } from "@/components/shared/notification-bell";
 import { initials } from "@/lib/utils";
 
 export function BusinessHeader({ title, subtitle }: { title: string; subtitle?: string }) {
@@ -17,10 +17,7 @@ export function BusinessHeader({ title, subtitle }: { title: string; subtitle?: 
         {subtitle && <p className="text-sm text-muted-foreground">{subtitle}</p>}
       </div>
       <div className="flex items-center gap-3">
-        <button className="relative flex size-9 items-center justify-center rounded-full bg-surface-2">
-          <Bell className="size-4.5" />
-          <span className="absolute right-1.5 top-1.5 size-1.5 rounded-full bg-accent" />
-        </button>
+        <NotificationBell />
         <Link href="/salon-pro/profile">
           <Avatar className="size-9">
             <AvatarImage src={myBusinessSalon.logo} alt={myBusinessSalon.name} />

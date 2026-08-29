@@ -15,6 +15,7 @@ import { initials } from "@/lib/utils";
 
 export default function BarberPortfolioPage() {
   const currentBarberId = useAppStore((s) => s.currentBarberId);
+  const pushToast = useAppStore((s) => s.pushToast);
   const barber = getBarber(currentBarberId);
   const salon = barber ? getSalon(barber.salonId) : null;
   const titles = getCommunityTitlesForBarber(currentBarberId);
@@ -55,7 +56,10 @@ export default function BarberPortfolioPage() {
 
       <div className="flex items-center justify-between">
         <h2 className="text-sm font-semibold text-muted-foreground">Lucrări</h2>
-        <button className="flex items-center gap-1 text-sm font-medium text-accent">
+        <button
+          onClick={() => pushToast("Încărcarea fotografiilor va fi disponibilă după conectarea Supabase Storage.")}
+          className="flex items-center gap-1 text-sm font-medium text-accent"
+        >
           <Plus className="size-3.5" /> Adaugă foto
         </button>
       </div>
