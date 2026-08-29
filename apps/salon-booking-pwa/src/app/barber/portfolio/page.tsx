@@ -1,5 +1,6 @@
 "use client";
 
+import { useRef, useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { Eye, Plus, Star } from "lucide-react";
@@ -8,6 +9,9 @@ import { getBarber } from "@/lib/mock/barbers";
 import { getSalon } from "@/lib/mock/salons";
 import { getCommunityTitlesForBarber } from "@/lib/mock/community";
 import { useAppStore } from "@/lib/store";
+import { isSupabaseConfigured } from "@/lib/supabase/config";
+import { uploadImage } from "@/lib/supabase/storage";
+import { mirrorBarberGallery } from "@/lib/supabase/media";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -19,6 +23,31 @@ export default function BarberPortfolioPage() {
   const barber = getBarber(currentBarberId);
   const salon = barber ? getSalon(barber.salonId) : null;
   const titles = getCommunityTitlesForBarber(currentBarberId);
+  const [gallery, setGallery] = useState(barber?.gallery ?? salon?.gallery ?? []);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  function openPicker() {
+    if (!isSupabaseConfigured()) {
+      pushToast("Încărcarea fotografiilor va fi disponibilă după conectarea Supabase Storage.");
+      return;
+    }
+    fileInputRef.current?.click();
+  }
+
+  async function handleAddPhoto(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    e.target.value = "";
+    if (!file || !barber) return;
+    try {
+      const url = await uploadImage(file, `barbers/${barber.id}/portfolio`);
+      const next = [...gallery, url];
+      setGallery(next);
+      void mirrorBarberGallery(barber.id, next);
+      pushToast("Fotografie adăugată.", "success");
+    } catch {
+      pushToast("Încărcarea a eșuat. Încearcă din nou.", "destructive");
+    }
+  }
 
   if (!barber || !salon) return null;
 
@@ -56,15 +85,22 @@ export default function BarberPortfolioPage() {
 
       <div className="flex items-center justify-between">
         <h2 className="text-sm font-semibold text-muted-foreground">Lucrări</h2>
+        <input
+          ref={fileInputRef}
+          type="file"
+          accept="image/*"
+          className="hidden"
+          onChange={handleAddPhoto}
+        />
         <button
-          onClick={() => pushToast("Încărcarea fotografiilor va fi disponibilă după conectarea Supabase Storage.")}
+          onClick={openPicker}
           className="flex items-center gap-1 text-sm font-medium text-accent"
         >
           <Plus className="size-3.5" /> Adaugă foto
         </button>
       </div>
       <div className="grid grid-cols-3 gap-2">
-        {salon.gallery.map((src) => (
+        {gallery.map((src) => (
           <div key={src} className="relative aspect-square overflow-hidden rounded-xl bg-surface-2">
             <Image src={src} alt="Lucrare portofoliu" fill sizes="33vw" className="object-cover" />
           </div>

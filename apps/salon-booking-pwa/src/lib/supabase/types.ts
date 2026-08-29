@@ -71,6 +71,7 @@ export type BarberRow = {
   specialties: string[];
   available_now: boolean;
   next_slot_at: string | null;
+  gallery: string[];
   created_at: string;
 };
 

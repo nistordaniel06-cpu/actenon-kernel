@@ -21,6 +21,7 @@ export interface Barber {
   specialties: string[];
   availableNow: boolean;
   nextSlotIso?: string;
+  gallery?: string[];
 }
 
 export interface Review {

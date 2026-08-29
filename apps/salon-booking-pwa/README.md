@@ -33,9 +33,9 @@ de mediu setate, aplicația rulează exact ca până acum, pe date mock.
 - Recharts pentru statistici
 - date-fns instalat, formatele curente folosesc `Intl` cu locale `ro-RO`
 - Supabase (`@supabase/supabase-js` + `@supabase/ssr`) — schemă, autentificare
-  pe email, scrierea programărilor și citirea saloanelor/frizerilor/serviciilor
-  sunt cablate pe ecranele server (Descoperă, profil salon, rezervare); restul
-  rămâne pe mock până la etapa următoare (vezi mai jos)
+  pe email, scrierea programărilor, citirea saloanelor/frizerilor/serviciilor
+  și Storage pentru fotografii (copertă/galerie salon, portofoliu frizer)
+  sunt cablate; restul citirilor rămân pe mock până la etapa următoare (vezi mai jos)
 
 ## Structură
 
@@ -60,8 +60,13 @@ de mediu setate, aplicația rulează exact ca până acum, pe date mock.
 - `src/lib/data/catalog.ts` — citirea saloanelor/frizerilor/serviciilor: din
   Postgres când Supabase e configurat, altfel din mock — folosit de ecranele
   server Descoperă, profil salon și rezervare
+- `src/lib/supabase/storage.ts` — încărcare de imagini în bucket-ul public
+  `media`; `src/lib/supabase/media.ts` — mirror-ul actualizărilor de fotografii
+  (copertă/galerie salon, portofoliu frizer) către Postgres
 - `src/proxy.ts` — împrospătează sesiunea Supabase (no-op fără variabile de mediu)
 - `supabase/migrations/0001_init.sql` — schema Postgres completă + RLS
+- `supabase/migrations/0002_storage_and_barber_gallery.sql` — bucket-ul de
+  Storage + politicile lui, coloana de galerie a frizerului
 - `supabase/seed.sql` — catalogul de mock data (saloane, frizeri, servicii,
   produse, roata zilnică) pregătit pentru un proiect Supabase nou
 - `src/components/ui/` — primitive stil shadcn
@@ -97,8 +102,9 @@ Toate trec fără erori la ultima verificare (29 rute compilate).
 ## Conectarea la Supabase
 
 1. Creează un proiect nou pe [supabase.com](https://supabase.com).
-2. În **SQL Editor**, rulează în ordine `supabase/migrations/0001_init.sql`
-   (schema + RLS) și opțional `supabase/seed.sql` (populează saloanele,
+2. În **SQL Editor**, rulează în ordine `supabase/migrations/0001_init.sql`,
+   `supabase/migrations/0002_storage_and_barber_gallery.sql` (schema + RLS +
+   bucket-ul de Storage) și opțional `supabase/seed.sql` (populează saloanele,
    frizerii, serviciile, produsele și roata zilnică, ca să nu pornești de la
    un catalog gol).
 3. Din **Project Settings → API**, copiază `.env.local.example` în
@@ -129,6 +135,11 @@ Toate trec fără erori la ultima verificare (29 rute compilate).
   clientului lor sau frizerului/salonului implicat, iar constrângerea
   `exclude` de pe `appointments` respinge la nivel de bază de date orice
   suprapunere pe același frizer.
+- Supabase Storage: „Schimbă coperta" și adăugarea de fotografii în galeria
+  salonului (Salon Pro) și în portofoliul frizerului încarcă imagini reale în
+  bucket-ul public `media` și persistă URL-ul în Postgres. Fără Supabase
+  configurat, butoanele afișează același mesaj clar ca înainte — nu se
+  deschide niciun selector de fișiere.
 
 **Ce rămâne pentru etapa următoare:**
 
@@ -144,6 +155,4 @@ Toate trec fără erori la ultima verificare (29 rute compilate).
   unui provider extern).
 - Sincronizare reală cu Google Calendar API pentru frizeri (link-ul Google
   Calendar și fișierul `.ics` pentru client sunt deja generate în flux).
-- Supabase Storage pentru fotografiile de portofoliu/coperți (butoanele de
-  upload afișează azi un mesaj clar că urmează).
 - Facturare/abonament pentru Salon Pro (secțiunea Rapoarte e pregătită ca placeholder).

@@ -49,6 +49,7 @@ function mapBarber(row: BarberRow): Barber {
     specialties: row.specialties,
     availableNow: row.available_now,
     nextSlotIso: row.next_slot_at ?? undefined,
+    gallery: row.gallery.length > 0 ? row.gallery : undefined,
   };
 }
 
