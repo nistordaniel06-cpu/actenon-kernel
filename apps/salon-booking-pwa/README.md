@@ -33,8 +33,9 @@ de mediu setate, aplicația rulează exact ca până acum, pe date mock.
 - Recharts pentru statistici
 - date-fns instalat, formatele curente folosesc `Intl` cu locale `ro-RO`
 - Supabase (`@supabase/supabase-js` + `@supabase/ssr`) — schemă, autentificare
-  pe email și scrierea programărilor sunt cablate; restul citirilor rămân pe
-  mock până la etapa următoare (vezi mai jos)
+  pe email, scrierea programărilor și citirea saloanelor/frizerilor/serviciilor
+  sunt cablate pe ecranele server (Descoperă, profil salon, rezervare); restul
+  rămâne pe mock până la etapa următoare (vezi mai jos)
 
 ## Structură
 
@@ -53,8 +54,12 @@ de mediu setate, aplicația rulează exact ca până acum, pe date mock.
   servicii, disponibilitate pe 7 zile, programări viitoare/istoric, 8
   produse, review-uri, ranguri, campanii
 - `src/lib/calendar.ts` — link Google Calendar + generare `.ics`
-- `src/lib/supabase/` — client browser/server, config (`isSupabaseConfigured()`),
-  autentificare pe email, mirror-ul scrierilor de programări
+- `src/lib/supabase/` — client browser/server (cu timeout pe fiecare cerere,
+  ca un backend nedisponibil să nu blocheze pagina), config
+  (`isSupabaseConfigured()`), autentificare pe email, mirror-ul scrierilor de programări
+- `src/lib/data/catalog.ts` — citirea saloanelor/frizerilor/serviciilor: din
+  Postgres când Supabase e configurat, altfel din mock — folosit de ecranele
+  server Descoperă, profil salon și rezervare
 - `src/proxy.ts` — împrospătează sesiunea Supabase (no-op fără variabile de mediu)
 - `supabase/migrations/0001_init.sql` — schema Postgres completă + RLS
 - `supabase/seed.sql` — catalogul de mock data (saloane, frizeri, servicii,
@@ -114,6 +119,10 @@ Toate trec fără erori la ultima verificare (29 rute compilate).
   acum și în Postgres, best-effort, când ești autentificat — starea Zustand
   locală rămâne mereu sursa de adevăr pentru UI, deci nimic nu se rupe dacă
   scrierea remote eșuează sau dacă nu ești logat.
+- Citirea saloanelor, frizerilor și serviciilor pe cele trei ecrane server
+  (Descoperă, profil salon, rezervare) — `src/lib/data/catalog.ts` interoghează
+  Postgres când e configurat, cu timeout de 5s pe fiecare cerere ca un backend
+  nedisponibil să nu blocheze pagina, și revine automat pe mock la orice eroare.
 - Schema completă (saloane, frizeri, servicii, personal, recenzii, campanii,
   boost-uri, magazin, roata zilnică, puncte, clasament) cu RLS: catalogul e
   public la citire, programările/recenziile/punctele sunt vizibile doar
@@ -123,8 +132,13 @@ Toate trec fără erori la ultima verificare (29 rute compilate).
 
 **Ce rămâne pentru etapa următoare:**
 
-- Înlocuirea treptată a citirilor din `src/lib/mock/` (saloane, frizeri,
-  servicii, magazin) cu interogări Supabase — schema le suportă deja pe toate.
+- Restul citirilor din `src/lib/mock/` (magazin, agenda frizerului, contextul
+  Salon Pro, listele de clienți) rulează încă pe mock. Cele trei ecrane deja
+  cablate sunt Server Components care pasează date gata rezolvate mai departe;
+  restul sunt Client Components care fac lookup-uri sincrone direct din mock
+  la randare — trecerea lor pe Supabase cere fie o restructurare
+  server/client asemănătoare, fie o stare de încărcare (skeleton) pentru citiri
+  client-side, ca să nu apară ecrane pe jumătate populate.
 - Autentificare cu telefon / Apple (schema de `profiles` e neutră la
   provider; azi e cablat doar email, cel mai simplu de activat fără cheile
   unui provider extern).

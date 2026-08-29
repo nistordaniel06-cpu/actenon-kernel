@@ -1,9 +1,10 @@
 import { Suspense } from "react";
 
-import { salons } from "@/lib/mock/salons";
+import { getSalons } from "@/lib/data/catalog";
 import { DiscoverClient } from "./discover-client";
 
-export default function DiscoverPage() {
+export default async function DiscoverPage() {
+  const salons = await getSalons();
   return (
     <Suspense>
       <DiscoverClient salons={salons} />

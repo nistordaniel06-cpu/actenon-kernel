@@ -2,6 +2,7 @@ import { createServerClient } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
 
 import { isSupabaseConfigured, supabaseAnonKey, supabaseUrl } from "@/lib/supabase/config";
+import { fetchWithTimeout } from "@/lib/supabase/fetch-with-timeout";
 
 // Împrospătează sesiunea Supabase pe fiecare request. Dacă aplicația nu are
 // încă variabilele de mediu setate, nu face nimic — comportamentul actual pe
@@ -14,6 +15,7 @@ export async function proxy(request: NextRequest) {
   let response = NextResponse.next({ request });
 
   const supabase = createServerClient(supabaseUrl!, supabaseAnonKey!, {
+    global: { fetch: fetchWithTimeout },
     cookies: {
       getAll: () => request.cookies.getAll(),
       setAll: (cookiesToSet) => {
@@ -24,7 +26,11 @@ export async function proxy(request: NextRequest) {
     },
   });
 
-  await supabase.auth.getUser();
+  try {
+    await supabase.auth.getUser();
+  } catch (error) {
+    console.warn("[supabase] împrospătarea sesiunii a eșuat, cererea continuă neschimbată:", error);
+  }
 
   return response;
 }

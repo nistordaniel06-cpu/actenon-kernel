@@ -2,10 +2,8 @@ import { notFound } from "next/navigation";
 import Link from "next/link";
 import { MapPin, Flame } from "lucide-react";
 
-import { getSalon } from "@/lib/mock/salons";
-import { getBarbersForSalon } from "@/lib/mock/barbers";
+import { getSalonWithBarbers } from "@/lib/data/catalog";
 import { getDealsForSalon } from "@/lib/mock/deals";
-import { getService } from "@/lib/mock/services";
 import { SalonGallery } from "@/components/client/salon-gallery";
 import { Rating } from "@/components/client/rating";
 import { PriceLevel } from "@/components/client/price-level";
@@ -18,11 +16,14 @@ import { formatPrice } from "@/lib/utils";
 
 export default async function SalonProfilePage({ params }: PageProps<"/salon/[id]">) {
   const { id } = await params;
-  const salon = getSalon(id);
-  if (!salon) notFound();
+  const result = await getSalonWithBarbers(id);
+  if (!result) notFound();
+  const { salon, barbers } = result;
 
-  const barbers = getBarbersForSalon(salon.id);
-  const dealsForSalon = getDealsForSalon(salon.id);
+  const dealsForSalon = getDealsForSalon(salon.id).map((deal) => ({
+    deal,
+    service: salon.services.find((s) => s.id === deal.serviceId),
+  }));
 
   return (
     <div className="flex flex-col pb-28">
@@ -61,8 +62,7 @@ export default async function SalonProfilePage({ params }: PageProps<"/salon/[id
             <p className="flex items-center gap-1.5 text-sm font-semibold text-accent">
               <Flame className="size-4" /> Oferte de ultim moment aici
             </p>
-            {dealsForSalon.map((deal) => {
-              const service = getService(deal.serviceId);
+            {dealsForSalon.map(({ deal, service }) => {
               if (!service) return null;
               const price = Math.round(service.price * (1 - deal.discountPercent / 100));
               return (

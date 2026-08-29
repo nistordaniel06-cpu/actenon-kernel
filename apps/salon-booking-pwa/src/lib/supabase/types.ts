@@ -38,6 +38,60 @@ export type ProfileRow = {
   member_since: string;
 };
 
+export type SalonRow = {
+  id: string;
+  owner_id: string | null;
+  name: string;
+  type: "salon" | "barbershop";
+  cover_image: string | null;
+  gallery: string[];
+  logo: string | null;
+  rating: number;
+  review_count: number;
+  address: string;
+  lat: number;
+  lng: number;
+  price_level: 1 | 2 | 3;
+  open_now_until: string | null;
+  tags: string[];
+  has_hot_deal: boolean;
+  created_at: string;
+};
+
+export type BarberRow = {
+  id: string;
+  salon_id: string;
+  profile_id: string | null;
+  name: string;
+  avatar: string | null;
+  title: string | null;
+  rating: number;
+  review_count: number;
+  years_experience: number;
+  specialties: string[];
+  available_now: boolean;
+  next_slot_at: string | null;
+  created_at: string;
+};
+
+export type ServiceRow = {
+  id: string;
+  salon_id: string;
+  name: string;
+  category: "hair" | "beard" | "color" | "spa" | "kids" | "combo";
+  duration_min: number;
+  price: number;
+  description: string | null;
+  active: boolean;
+};
+
+type ReadOnlyTable<Row> = {
+  Row: Row;
+  Insert: Row;
+  Update: Partial<Row>;
+  Relationships: [];
+};
+
 export interface Database {
   public: {
     Tables: {
@@ -62,6 +116,9 @@ export interface Database {
         Update: Partial<AppointmentRow>;
         Relationships: [];
       };
+      salons: ReadOnlyTable<SalonRow>;
+      barbers: ReadOnlyTable<BarberRow>;
+      services: ReadOnlyTable<ServiceRow>;
     };
     Views: Record<string, never>;
     Functions: Record<string, never>;

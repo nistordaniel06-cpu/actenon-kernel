@@ -2,6 +2,7 @@ import { createBrowserClient } from "@supabase/ssr";
 
 import { Database } from "./types";
 import { supabaseAnonKey, supabaseUrl } from "./config";
+import { fetchWithTimeout } from "./fetch-with-timeout";
 
 let browserClient: ReturnType<typeof createBrowserClient<Database>> | null = null;
 
@@ -14,7 +15,9 @@ export function getSupabaseBrowserClient() {
     throw new Error("Supabase nu este configurat (lipsesc variabilele de mediu).");
   }
   if (!browserClient) {
-    browserClient = createBrowserClient<Database>(supabaseUrl, supabaseAnonKey);
+    browserClient = createBrowserClient<Database>(supabaseUrl, supabaseAnonKey, {
+      global: { fetch: fetchWithTimeout },
+    });
   }
   return browserClient;
 }
