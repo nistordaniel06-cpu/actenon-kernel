@@ -15,7 +15,12 @@ MVP complet navigabil pe date mock, cu toate acțiunile principale funcționale
 "Programările mele" și în agenda frizerului, anularea/reprogramarea
 actualizează starea reală, roata zilnică, review-urile și magazinul au
 interacțiuni reale, iar Salon Pro vede calendarul echipei și indicatorii la
-zi. Backend-ul real (Supabase, sincronizare calendar) este următoarea etapă.
+zi.
+
+Schema Postgres, autentificarea reală (email, fără parolă) și scrierea
+programărilor sunt deja pregătite pentru Supabase — vezi
+[„Conectarea la Supabase"](#conectarea-la-supabase) mai jos. Fără variabilele
+de mediu setate, aplicația rulează exact ca până acum, pe date mock.
 
 ## Stack
 
@@ -27,7 +32,9 @@ zi. Backend-ul real (Supabase, sincronizare calendar) este următoarea etapă.
 - Lucide React pentru iconițe
 - Recharts pentru statistici
 - date-fns instalat, formatele curente folosesc `Intl` cu locale `ro-RO`
-- Supabase client libraries instalate, pregătite pentru etapa următoare
+- Supabase (`@supabase/supabase-js` + `@supabase/ssr`) — schemă, autentificare
+  pe email și scrierea programărilor sunt cablate; restul citirilor rămân pe
+  mock până la etapa următoare (vezi mai jos)
 
 ## Structură
 
@@ -46,6 +53,12 @@ zi. Backend-ul real (Supabase, sincronizare calendar) este următoarea etapă.
   servicii, disponibilitate pe 7 zile, programări viitoare/istoric, 8
   produse, review-uri, ranguri, campanii
 - `src/lib/calendar.ts` — link Google Calendar + generare `.ics`
+- `src/lib/supabase/` — client browser/server, config (`isSupabaseConfigured()`),
+  autentificare pe email, mirror-ul scrierilor de programări
+- `src/proxy.ts` — împrospătează sesiunea Supabase (no-op fără variabile de mediu)
+- `supabase/migrations/0001_init.sql` — schema Postgres completă + RLS
+- `supabase/seed.sql` — catalogul de mock data (saloane, frizeri, servicii,
+  produse, roata zilnică) pregătit pentru un proiect Supabase nou
 - `src/components/ui/` — primitive stil shadcn
 - `src/components/client/`, `src/components/barber/`, `src/components/salon-pro/`, `src/components/shared/` — componente pe rol
 
@@ -76,12 +89,47 @@ npm run build
 
 Toate trec fără erori la ultima verificare (29 rute compilate).
 
-## Următoarea etapă (Supabase)
+## Conectarea la Supabase
 
-- Autentificare reală (telefon / Apple) cu Supabase Auth
-- Schema Postgres pentru saloane, frizeri, servicii, programări, review-uri, puncte
-- Scriere programări în timp real, fără suprapuneri (constrângere unică pe frizer + interval)
-- Sincronizare reală cu Google Calendar API pentru frizeri (link-ul Google Calendar
-  și fișierul `.ics` pentru client sunt deja generate în flux)
-- Supabase Storage pentru fotografiile de portofoliu
-- Facturare/abonament pentru Salon Pro (secțiunea Rapoarte e pregătită ca placeholder)
+1. Creează un proiect nou pe [supabase.com](https://supabase.com).
+2. În **SQL Editor**, rulează în ordine `supabase/migrations/0001_init.sql`
+   (schema + RLS) și opțional `supabase/seed.sql` (populează saloanele,
+   frizerii, serviciile, produsele și roata zilnică, ca să nu pornești de la
+   un catalog gol).
+3. Din **Project Settings → API**, copiază `.env.local.example` în
+   `.env.local` și completează `NEXT_PUBLIC_SUPABASE_URL` și
+   `NEXT_PUBLIC_SUPABASE_ANON_KEY`.
+4. În **Authentication → Providers**, activează Email (Magic Link e activat
+   implicit) — nu e nevoie de parolă.
+5. Repornește `npm run dev`. Pe ecranul de bun venit apare acum și „Cont real
+   (Supabase)" cu autentificare pe email; fără pașii de mai sus, aplicația
+   rulează exact ca înainte, pe date mock.
+
+**Ce e deja cablat la Supabase:**
+
+- Autentificare pe email (magic link), cu profil creat automat (`profiles`,
+  rol implicit `client`) și sincronizat cu rolul din aplicație.
+- Scrierea programărilor: `addAppointment`, `updateAppointmentStatus`,
+  `cancelAppointment`, `rescheduleAppointment` din `src/lib/store.ts` oglindesc
+  acum și în Postgres, best-effort, când ești autentificat — starea Zustand
+  locală rămâne mereu sursa de adevăr pentru UI, deci nimic nu se rupe dacă
+  scrierea remote eșuează sau dacă nu ești logat.
+- Schema completă (saloane, frizeri, servicii, personal, recenzii, campanii,
+  boost-uri, magazin, roata zilnică, puncte, clasament) cu RLS: catalogul e
+  public la citire, programările/recenziile/punctele sunt vizibile doar
+  clientului lor sau frizerului/salonului implicat, iar constrângerea
+  `exclude` de pe `appointments` respinge la nivel de bază de date orice
+  suprapunere pe același frizer.
+
+**Ce rămâne pentru etapa următoare:**
+
+- Înlocuirea treptată a citirilor din `src/lib/mock/` (saloane, frizeri,
+  servicii, magazin) cu interogări Supabase — schema le suportă deja pe toate.
+- Autentificare cu telefon / Apple (schema de `profiles` e neutră la
+  provider; azi e cablat doar email, cel mai simplu de activat fără cheile
+  unui provider extern).
+- Sincronizare reală cu Google Calendar API pentru frizeri (link-ul Google
+  Calendar și fișierul `.ics` pentru client sunt deja generate în flux).
+- Supabase Storage pentru fotografiile de portofoliu/coperți (butoanele de
+  upload afișează azi un mesaj clar că urmează).
+- Facturare/abonament pentru Salon Pro (secțiunea Rapoarte e pregătită ca placeholder).

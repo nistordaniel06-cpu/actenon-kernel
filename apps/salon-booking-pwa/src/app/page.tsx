@@ -1,11 +1,15 @@
 "use client";
 
+import { useState } from "react";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
-import { Phone, User, Scissors, Store, ChevronRight } from "lucide-react";
+import { Mail, Phone, User, Scissors, Store, ChevronRight } from "lucide-react";
 
 import { useAppStore, type Role } from "@/lib/store";
+import { isSupabaseConfigured } from "@/lib/supabase/config";
+import { signInWithEmail } from "@/lib/supabase/auth";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 
 const roleCards: { role: Role; href: string; icon: typeof User; title: string; desc: string }[] = [
   { role: "client", href: "/home", icon: User, title: "Sunt client", desc: "Programează și gestionează vizitele." },
@@ -16,10 +20,26 @@ const roleCards: { role: Role; href: string; icon: typeof User; title: string; d
 export default function WelcomePage() {
   const router = useRouter();
   const setRole = useAppStore((s) => s.setRole);
+  const pushToast = useAppStore((s) => s.pushToast);
+  const [email, setEmail] = useState("");
+  const [sending, setSending] = useState(false);
 
   function enter(role: Role, href: string) {
     setRole(role);
     router.push(href);
+  }
+
+  async function sendMagicLink() {
+    if (!email) return;
+    setSending(true);
+    try {
+      await signInWithEmail(email);
+      pushToast("Ți-am trimis un link de autentificare pe email.", "success");
+    } catch {
+      pushToast("Nu am putut trimite linkul. Încearcă din nou.", "destructive");
+    } finally {
+      setSending(false);
+    }
   }
 
   return (
@@ -79,10 +99,33 @@ export default function WelcomePage() {
           </Button>
         </div>
 
+        {isSupabaseConfigured() && (
+          <div className="flex flex-col gap-2 rounded-2xl border border-accent/30 bg-accent-soft p-4">
+            <p className="text-sm font-medium text-accent">Cont real (Supabase)</p>
+            <div className="flex gap-2">
+              <Input
+                type="email"
+                inputMode="email"
+                placeholder="email@exemplu.ro"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                className="flex-1"
+              />
+              <Button size="icon" onClick={sendMagicLink} disabled={sending || !email} aria-label="Trimite link de autentificare">
+                <Mail className="size-4" />
+              </Button>
+            </div>
+            <p className="text-xs text-muted-foreground">Îți trimitem un link de autentificare, fără parolă.</p>
+          </div>
+        )}
+
         <p className="pb-2 text-center text-xs text-muted-foreground">
           Continuând, accepți{" "}
           <span className="underline underline-offset-2">Termenii</span> și{" "}
-          <span className="underline underline-offset-2">Politica de confidențialitate</span>. Autentificarea reală se activează în etapa următoare — acum intri direct în demo.
+          <span className="underline underline-offset-2">Politica de confidențialitate</span>.{" "}
+          {isSupabaseConfigured()
+            ? "Poți intra și direct în demo, fără cont, din opțiunile de mai sus."
+            : "Autentificarea reală se activează după conectarea Supabase — acum intri direct în demo."}
         </p>
       </div>
     </div>

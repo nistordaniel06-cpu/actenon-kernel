@@ -16,6 +16,11 @@ import { seedAppointments, currentUser, rewardActivity as seedActivity } from "@
 import { salonSeedAppointments } from "@/lib/mock/business";
 import { reviewsBySalon } from "@/lib/mock/reviews";
 import { wheelPrizes } from "@/lib/mock/wheel";
+import {
+  mirrorAppointmentReschedule,
+  mirrorAppointmentStatus,
+  mirrorCreateAppointment,
+} from "@/lib/supabase/appointments";
 
 export type Role = "client" | "barber" | "salonPro";
 
@@ -74,26 +79,34 @@ export const useAppStore = create<AppState>()(
       currentBarberId: "barber-1",
 
       appointments: [...seedAppointments, ...salonSeedAppointments],
-      addAppointment: (a) =>
-        set((s) => ({ appointments: [...s.appointments, a] })),
-      updateAppointmentStatus: (id, status) =>
+      addAppointment: (a) => {
+        set((s) => ({ appointments: [...s.appointments, a] }));
+        void mirrorCreateAppointment(a);
+      },
+      updateAppointmentStatus: (id, status) => {
         set((s) => ({
           appointments: s.appointments.map((a) =>
             a.id === id ? { ...a, status } : a,
           ),
-        })),
-      cancelAppointment: (id) =>
+        }));
+        void mirrorAppointmentStatus(id, status);
+      },
+      cancelAppointment: (id) => {
         set((s) => ({
           appointments: s.appointments.map((a) =>
             a.id === id ? { ...a, status: "anulat" as AppointmentStatus } : a,
           ),
-        })),
-      rescheduleAppointment: (id, startIso, endIso) =>
+        }));
+        void mirrorAppointmentStatus(id, "anulat");
+      },
+      rescheduleAppointment: (id, startIso, endIso) => {
         set((s) => ({
           appointments: s.appointments.map((a) =>
             a.id === id ? { ...a, startIso, endIso, status: "confirmat" as AppointmentStatus } : a,
           ),
-        })),
+        }));
+        void mirrorAppointmentReschedule(id, startIso, endIso);
+      },
 
       points: currentUser.points,
       pointActivity: seedActivity,

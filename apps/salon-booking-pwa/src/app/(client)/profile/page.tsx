@@ -1,5 +1,6 @@
 "use client";
 
+import { useEffect, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import {
@@ -19,6 +20,8 @@ import {
 import { currentUser } from "@/lib/mock/user";
 import { useAppStore, type Role } from "@/lib/store";
 import { rankForPoints } from "@/lib/ranks";
+import { isSupabaseConfigured } from "@/lib/supabase/config";
+import { getCurrentProfile, setProfileRole, signOutSupabase } from "@/lib/supabase/auth";
 import { TierBadge } from "@/components/client/tier-badge";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { initials } from "@/lib/utils";
@@ -51,10 +54,26 @@ export default function ProfilePage() {
   const setRole = useAppStore((s) => s.setRole);
   const pushToast = useAppStore((s) => s.pushToast);
   const rank = rankForPoints(points);
+  const [supabaseEmail, setSupabaseEmail] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (!isSupabaseConfigured()) return;
+    getCurrentProfile().then((profile) => {
+      if (!profile) return;
+      setSupabaseEmail(profile.email);
+      setRole(profile.role);
+    });
+  }, [setRole]);
 
   function switchRole(role: Role, href: string) {
     setRole(role);
+    if (isSupabaseConfigured() && supabaseEmail) void setProfileRole(role);
     router.push(href);
+  }
+
+  function logOut() {
+    if (isSupabaseConfigured()) void signOutSupabase();
+    router.push("/");
   }
 
   return (
@@ -68,7 +87,10 @@ export default function ProfilePage() {
         </Avatar>
         <div className="min-w-0">
           <p className="truncate font-semibold">{currentUser.name}</p>
-          <p className="truncate text-sm text-muted-foreground">{currentUser.email}</p>
+          <p className="truncate text-sm text-muted-foreground">{supabaseEmail ?? currentUser.email}</p>
+          {supabaseEmail && (
+            <p className="mt-0.5 text-[11px] font-medium text-accent">Cont real conectat (Supabase)</p>
+          )}
           <TierBadge rank={rank} className="mt-1.5" />
         </div>
       </div>
@@ -141,7 +163,7 @@ export default function ProfilePage() {
       ))}
 
       <button
-        onClick={() => router.push("/")}
+        onClick={logOut}
         className="flex items-center justify-center gap-2 rounded-2xl border border-destructive/30 py-3.5 text-sm font-semibold text-destructive"
       >
         <LogOut className="size-4" /> Deconectare
