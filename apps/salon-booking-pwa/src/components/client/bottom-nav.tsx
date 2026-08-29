@@ -2,16 +2,16 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Home, Compass, CalendarCheck, Gift, User } from "lucide-react";
+import { Home, Compass, CalendarCheck, Wallet, User } from "lucide-react";
 
 import { cn } from "@/lib/utils";
 
 const tabs = [
-  { href: "/", label: "Home", icon: Home },
-  { href: "/explore", label: "Explore", icon: Compass },
-  { href: "/appointments", label: "Bookings", icon: CalendarCheck },
-  { href: "/rewards", label: "Rewards", icon: Gift },
-  { href: "/profile", label: "Profile", icon: User },
+  { href: "/home", label: "Acasă", icon: Home },
+  { href: "/discover", label: "Descoperă", icon: Compass },
+  { href: "/appointments", label: "Programări", icon: CalendarCheck },
+  { href: "/wallet", label: "Portofel", icon: Wallet },
+  { href: "/profile", label: "Profil", icon: User },
 ] as const;
 
 export function BottomNav() {
@@ -21,7 +21,7 @@ export function BottomNav() {
     <nav className="fixed inset-x-0 bottom-0 z-40 border-t border-border bg-card/95 backdrop-blur-md pb-[max(env(safe-area-inset-bottom),0.5rem)]">
       <div className="mx-auto flex max-w-md items-stretch justify-between px-2">
         {tabs.map(({ href, label, icon: Icon }) => {
-          const active = href === "/" ? pathname === "/" : pathname.startsWith(href);
+          const active = pathname.startsWith(href);
           return (
             <Link
               key={href}

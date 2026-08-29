@@ -1,8 +1,7 @@
-import { BusinessClient, CalendarBooking, StatPoint } from "@/lib/types";
+import { Appointment, BusinessClient, StatPoint } from "@/lib/types";
 
-function daysAgo(d: number) {
-  return new Date(Date.now() - d * 86_400_000).toISOString();
-}
+import { daysAgo } from "./time";
+
 function todayAt(hour: number, minute = 0) {
   const dt = new Date();
   dt.setHours(hour, minute, 0, 0);
@@ -13,32 +12,31 @@ function addMin(iso: string, mins: number) {
 }
 
 export const businessClients: BusinessClient[] = [
-  { id: "bc-1", name: "Jordan Park", avatar: "/images/avatars/5.png", visits: 14, lastVisit: daysAgo(6), totalSpent: 840, tag: "vip", favoriteService: "Skin Fade" },
-  { id: "bc-2", name: "Alicia Moreno", avatar: "/images/avatars/9.png", visits: 8, lastVisit: daysAgo(14), totalSpent: 480, tag: "regular", favoriteService: "Cut + Beard Combo" },
-  { id: "bc-3", name: "Sam Keough", avatar: "/images/avatars/15.png", visits: 2, lastVisit: daysAgo(2), totalSpent: 100, tag: "new", favoriteService: "Signature Haircut" },
-  { id: "bc-4", name: "Marcus Tran", avatar: "/images/avatars/22.png", visits: 21, lastVisit: daysAgo(60), totalSpent: 1260, tag: "at-risk", favoriteService: "Hot Towel Shave" },
-  { id: "bc-5", name: "Ben Osei", avatar: "/images/avatars/27.png", visits: 5, lastVisit: daysAgo(10), totalSpent: 220, tag: "regular", favoriteService: "Kids Haircut" },
-  { id: "bc-6", name: "Grace Liu", avatar: "/images/avatars/36.png", visits: 1, lastVisit: daysAgo(1), totalSpent: 55, tag: "new", favoriteService: "Signature Haircut" },
+  { id: "bc-1", name: "Andrei Popa", avatar: "/images/avatars/5.png", visits: 14, lastVisit: daysAgo(6), totalSpent: 1260, tag: "vip", favoriteService: "Tuns fade" },
+  { id: "bc-2", name: "Alina Moraru", avatar: "/images/avatars/9.png", visits: 8, lastVisit: daysAgo(14), totalSpent: 640, tag: "regular", favoriteService: "Tuns + barbă" },
+  { id: "bc-3", name: "Sorin Chiriac", avatar: "/images/avatars/15.png", visits: 2, lastVisit: daysAgo(2), totalSpent: 140, tag: "new", favoriteService: "Tuns clasic" },
+  { id: "bc-4", name: "Marius Tudor", avatar: "/images/avatars/22.png", visits: 21, lastVisit: daysAgo(60), totalSpent: 1890, tag: "at-risk", favoriteService: "Bărbierit clasic" },
+  { id: "bc-5", name: "Bogdan Oprea", avatar: "/images/avatars/27.png", visits: 5, lastVisit: daysAgo(10), totalSpent: 320, tag: "regular", favoriteService: "Tuns copii" },
+  { id: "bc-6", name: "Georgiana Lazăr", avatar: "/images/avatars/36.png", visits: 1, lastVisit: daysAgo(1), totalSpent: 70, tag: "new", favoriteService: "Tuns clasic" },
 ];
 
-export const calendarBookings: CalendarBooking[] = [
-  { id: "cb-1", clientName: "Jordan Park", clientAvatar: "/images/avatars/5.png", serviceName: "Skin Fade", barberId: "barber-1", startIso: todayAt(9), endIso: addMin(todayAt(9), 40), status: "confirmed", price: 45 },
-  { id: "cb-2", clientName: "Sam Keough", clientAvatar: "/images/avatars/15.png", serviceName: "Signature Haircut", barberId: "barber-1", startIso: todayAt(10), endIso: addMin(todayAt(10), 45), status: "confirmed", price: 55 },
-  { id: "cb-3", clientName: "", clientAvatar: "", serviceName: "Open slot", barberId: "barber-1", startIso: todayAt(11), endIso: addMin(todayAt(11), 45), status: "hot-deal", price: 0 },
-  { id: "cb-4", clientName: "Alicia Moreno", clientAvatar: "/images/avatars/9.png", serviceName: "Cut + Beard Combo", barberId: "barber-1", startIso: todayAt(13), endIso: addMin(todayAt(13), 60), status: "confirmed", price: 75 },
-  { id: "cb-5", clientName: "Priya S.", clientAvatar: "/images/avatars/44.png", serviceName: "Beard Sculpt", barberId: "barber-2", startIso: todayAt(14), endIso: addMin(todayAt(14), 25), status: "pending", price: 30 },
-  { id: "cb-6", clientName: "", clientAvatar: "", serviceName: "Open slot", barberId: "barber-2", startIso: todayAt(15), endIso: addMin(todayAt(15), 40), status: "hot-deal", price: 0 },
-  { id: "cb-7", clientName: "Marcus Tran", clientAvatar: "/images/avatars/22.png", serviceName: "Hot Towel Shave", barberId: "barber-2", startIso: todayAt(16), endIso: addMin(todayAt(16), 30), status: "confirmed", price: 35 },
+export const salonSeedAppointments: Appointment[] = [
+  { id: "sa-1", salonId: "salon-1", barberId: "barber-1", serviceId: "svc-2", clientName: "Andrei Popa", clientAvatar: "/images/avatars/5.png", startIso: todayAt(9), endIso: addMin(todayAt(9), 45), status: "finalizat", price: 80, extras: [] },
+  { id: "sa-2", salonId: "salon-1", barberId: "barber-1", serviceId: "svc-1", clientName: "Sorin Chiriac", clientAvatar: "/images/avatars/15.png", startIso: todayAt(10), endIso: addMin(todayAt(10), 40), status: "confirmat", price: 70 },
+  { id: "sa-3", salonId: "salon-1", barberId: "barber-1", serviceId: "svc-5", clientName: "Alina Moraru", clientAvatar: "/images/avatars/9.png", startIso: todayAt(13), endIso: addMin(todayAt(13), 60), status: "confirmat", price: 100 },
+  { id: "sa-4", salonId: "salon-1", barberId: "barber-2", serviceId: "svc-3", clientName: "Petra Ionică", clientAvatar: "/images/avatars/44.png", startIso: todayAt(14), endIso: addMin(todayAt(14), 25), status: "in-asteptare", price: 45 },
+  { id: "sa-5", salonId: "salon-1", barberId: "barber-2", serviceId: "svc-4", clientName: "Marius Tudor", clientAvatar: "/images/avatars/22.png", startIso: todayAt(16), endIso: addMin(todayAt(16), 30), status: "confirmat", price: 55 },
+  { id: "sa-6", salonId: "salon-1", barberId: "barber-8", serviceId: "svc-2", clientName: "Georgiana Lazăr", clientAvatar: "/images/avatars/36.png", startIso: todayAt(11), endIso: addMin(todayAt(11), 45), status: "checkin", price: 80 },
 ];
 
 export const weeklyStats: StatPoint[] = [
-  { label: "Mon", revenue: 420, bookings: 8 },
-  { label: "Tue", revenue: 380, bookings: 7 },
-  { label: "Wed", revenue: 510, bookings: 10 },
-  { label: "Thu", revenue: 460, bookings: 9 },
-  { label: "Fri", revenue: 690, bookings: 13 },
-  { label: "Sat", revenue: 820, bookings: 16 },
-  { label: "Sun", revenue: 300, bookings: 6 },
+  { label: "Lun", revenue: 780, bookings: 8 },
+  { label: "Mar", revenue: 690, bookings: 7 },
+  { label: "Mie", revenue: 920, bookings: 10 },
+  { label: "Joi", revenue: 840, bookings: 9 },
+  { label: "Vin", revenue: 1240, bookings: 13 },
+  { label: "Sâm", revenue: 1480, bookings: 16 },
+  { label: "Dum", revenue: 540, bookings: 6 },
 ];
 
 export const businessStatsSummary = {

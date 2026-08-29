@@ -2,28 +2,37 @@
 @import "tw-animate-css";
 
 :root {
-  --background: #faf9f7;
-  --foreground: #171512;
-  --card: #ffffff;
-  --card-foreground: #171512;
-  --popover: #ffffff;
-  --popover-foreground: #171512;
-  --primary: #171512;
-  --primary-foreground: #faf9f7;
-  --secondary: #f1efe9;
-  --secondary-foreground: #171512;
-  --muted: #f1efe9;
-  --muted-foreground: #82786c;
-  --accent: #c8952c;
-  --accent-foreground: #171512;
-  --destructive: #b3441f;
-  --destructive-foreground: #faf9f7;
-  --border: #e8e4dc;
-  --input: #e8e4dc;
-  --ring: #c8952c;
-  --radius: 1.1rem;
-  --success: #2f7d4f;
-  --success-foreground: #faf9f7;
+  --background: #090b09;
+  --foreground: #f5f7f2;
+  --card: #111411;
+  --card-foreground: #f5f7f2;
+  --surface-2: #181c18;
+  --surface-3: #202520;
+  --popover: #181c18;
+  --popover-foreground: #f5f7f2;
+  --primary: #75b82a;
+  --primary-hover: #86c936;
+  --primary-foreground: #0b0f0a;
+  --secondary: #181c18;
+  --secondary-foreground: #f5f7f2;
+  --muted: #181c18;
+  --muted-foreground: #9da39a;
+  --accent: #75b82a;
+  --accent-hover: #86c936;
+  --accent-soft: rgba(117, 184, 42, 0.14);
+  --accent-foreground: #0b0f0a;
+  --destructive: #e25d5d;
+  --destructive-foreground: #f5f7f2;
+  --warning: #d7ad47;
+  --warning-foreground: #0b0f0a;
+  --success: #75b82a;
+  --success-foreground: #0b0f0a;
+  --border: rgba(255, 255, 255, 0.09);
+  --input: rgba(255, 255, 255, 0.12);
+  --ring: #75b82a;
+  --radius: 16px;
+  --radius-control: 12px;
+  color-scheme: dark;
 }
 
 @theme inline {
@@ -31,6 +40,8 @@
   --color-foreground: var(--foreground);
   --color-card: var(--card);
   --color-card-foreground: var(--card-foreground);
+  --color-surface-2: var(--surface-2);
+  --color-surface-3: var(--surface-3);
   --color-popover: var(--popover);
   --color-popover-foreground: var(--popover-foreground);
   --color-primary: var(--primary);
@@ -43,15 +54,17 @@
   --color-accent-foreground: var(--accent-foreground);
   --color-destructive: var(--destructive);
   --color-destructive-foreground: var(--destructive-foreground);
+  --color-warning: var(--warning);
+  --color-warning-foreground: var(--warning-foreground);
   --color-success: var(--success);
   --color-success-foreground: var(--success-foreground);
   --color-border: var(--border);
   --color-input: var(--input);
   --color-ring: var(--ring);
-  --radius-sm: calc(var(--radius) - 0.5rem);
-  --radius-md: calc(var(--radius) - 0.25rem);
+  --radius-sm: calc(var(--radius) - 8px);
+  --radius-md: calc(var(--radius) - 4px);
   --radius-lg: var(--radius);
-  --radius-xl: calc(var(--radius) + 0.4rem);
+  --radius-xl: calc(var(--radius) + 6px);
   --font-sans: var(--font-geist-sans);
   --font-mono: var(--font-geist-mono);
 }
@@ -62,6 +75,7 @@
 
 html {
   -webkit-tap-highlight-color: transparent;
+  color-scheme: dark;
 }
 
 body {
@@ -73,6 +87,20 @@ body {
 ::selection {
   background: var(--accent);
   color: var(--accent-foreground);
+}
+
+:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.001ms !important;
+    scroll-behavior: auto !important;
+  }
 }
 
 .no-scrollbar::-webkit-scrollbar {

@@ -21,6 +21,7 @@ export interface Barber {
   specialties: string[];
   availableNow: boolean;
   nextSlotIso?: string;
+  gallery?: string[];
 }
 
 export interface Review {
@@ -28,9 +29,14 @@ export interface Review {
   author: string;
   avatar: string;
   rating: number;
+  quality?: number;
+  punctuality?: number;
+  cleanliness?: number;
+  tags?: string[];
   comment: string;
   date: string;
   serviceName: string;
+  verified?: boolean;
 }
 
 export type DealBadge = "hot" | "last-minute" | "new-client" | null;
@@ -69,21 +75,40 @@ export interface Salon {
   hasHotDeal: boolean;
 }
 
-export type AppointmentStatus = "upcoming" | "completed" | "cancelled";
+export type AppointmentStatus =
+  | "confirmat"
+  | "in-asteptare"
+  | "checkin"
+  | "in-progres"
+  | "finalizat"
+  | "anulat"
+  | "no-show";
+
+export interface AppointmentExtra {
+  productId: string;
+  name: string;
+  price: number;
+}
 
 export interface Appointment {
   id: string;
   salonId: string;
   barberId: string;
   serviceId: string;
+  clientName: string;
+  clientAvatar: string;
   startIso: string;
   endIso: string;
   status: AppointmentStatus;
   price: number;
   pointsEarned?: number;
+  isHomeService?: boolean;
+  address?: string;
+  travelFee?: number;
+  extras?: AppointmentExtra[];
+  reviewed?: boolean;
+  clientNotes?: string;
 }
-
-export type RewardTier = "Bronze" | "Silver" | "Gold" | "Premiere";
 
 export interface RewardActivity {
   id: string;
@@ -98,9 +123,53 @@ export interface ClientProfile {
   email: string;
   avatar: string;
   points: number;
-  tier: RewardTier;
   referralCode: string;
   memberSince: string;
+}
+
+export interface ShopProduct {
+  id: string;
+  name: string;
+  category: "pomade" | "beard" | "shampoo" | "tools";
+  price: number;
+  memberPrice: number;
+  image: string;
+  description: string;
+  pickupOnly?: boolean;
+}
+
+export interface BoostCampaign {
+  id: string;
+  barberId: string;
+  startIso: string;
+  endIso: string;
+  discountPercent: number;
+  radiusKm: number;
+  budgetLei: number;
+  channels: ("instagram" | "whatsapp" | "push")[];
+  active: boolean;
+}
+
+export interface StaffMember {
+  id: string;
+  barberId: string;
+  shift: string;
+  commissionPercent: number;
+}
+
+export interface WheelPrize {
+  id: string;
+  label: string;
+  kind: "points" | "discount" | "product";
+  value: number;
+  color: string;
+}
+
+export interface CommunityTitle {
+  id: string;
+  barberId: string;
+  title: string;
+  week: string;
 }
 
 export interface BusinessClient {
@@ -120,14 +189,3 @@ export interface StatPoint {
   bookings: number;
 }
 
-export interface CalendarBooking {
-  id: string;
-  clientName: string;
-  clientAvatar: string;
-  serviceName: string;
-  barberId: string;
-  startIso: string;
-  endIso: string;
-  status: "confirmed" | "pending" | "hot-deal";
-  price: number;
-}

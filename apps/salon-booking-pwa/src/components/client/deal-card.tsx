@@ -15,7 +15,7 @@ export function DealCard({
   service: Service;
 }) {
   const discounted = Math.round(service.price * (1 - deal.discountPercent / 100));
-  const time = new Intl.DateTimeFormat("en-US", { hour: "numeric", minute: "2-digit" }).format(
+  const time = new Intl.DateTimeFormat("ro-RO", { hour: "numeric", minute: "2-digit" }).format(
     new Date(deal.startIso),
   );
 
@@ -37,7 +37,7 @@ export function DealCard({
       <div className="flex flex-col gap-1 p-3">
         <p className="truncate text-sm font-medium">{deal.title}</p>
         <div className="flex items-center justify-between">
-          <p className="text-xs text-muted-foreground">Today at {time} · {deal.seatsLeft} left</p>
+          <p className="text-xs text-muted-foreground">Astăzi la {time} · {deal.seatsLeft} loc rămase</p>
           <p className="text-sm font-semibold">
             {formatPrice(discounted)}{" "}
             <span className="text-xs font-normal text-muted-foreground line-through">

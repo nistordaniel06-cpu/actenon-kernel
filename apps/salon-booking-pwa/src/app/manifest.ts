@@ -2,15 +2,15 @@ import type { MetadataRoute } from "next";
 
 export default function manifest(): MetadataRoute.Manifest {
   return {
-    name: "NearCut — Book barbers & salons",
+    name: "NearCut — programări la frizerie",
     short_name: "NearCut",
     description:
-      "Find nearby barbers and salons, see who's available now, and book in three taps.",
+      "Găsește frizerii și saloane din apropiere, vezi cine e liber acum și rezervă în trei pași.",
     start_url: "/",
     display: "standalone",
     orientation: "portrait",
-    background_color: "#faf9f7",
-    theme_color: "#171512",
+    background_color: "#090b09",
+    theme_color: "#090b09",
     categories: ["lifestyle", "business"],
     icons: [
       { src: "/icon-192.png", sizes: "192x192", type: "image/png", purpose: "any" },

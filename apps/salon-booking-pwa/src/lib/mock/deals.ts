@@ -1,14 +1,12 @@
 import { Deal } from "@/lib/types";
 
-function inMin(mins: number) {
-  return new Date(Date.now() + mins * 60_000).toISOString();
-}
+import { inMin } from "./time";
 
 export const deals: Deal[] = [
   {
     id: "deal-1",
     salonId: "salon-1",
-    title: "Empty 3PM slot — Signature Cut",
+    title: "Slot liber la 15:00 — Tuns clasic",
     discountPercent: 30,
     startIso: inMin(90),
     endIso: inMin(135),
@@ -18,7 +16,7 @@ export const deals: Deal[] = [
   {
     id: "deal-2",
     salonId: "salon-3",
-    title: "Last-minute Balayage opening",
+    title: "Balayage — loc eliberat de ultim moment",
     discountPercent: 20,
     startIso: inMin(200),
     endIso: inMin(350),
@@ -27,23 +25,13 @@ export const deals: Deal[] = [
   },
   {
     id: "deal-3",
-    salonId: "salon-5",
-    title: "New client Scalp Spa",
+    salonId: "salon-1",
+    title: "Aranjat barbă pentru clienți noi",
     discountPercent: 25,
     startIso: inMin(60),
     endIso: inMin(90),
-    serviceId: "svc-9",
+    serviceId: "svc-3",
     seatsLeft: 2,
-  },
-  {
-    id: "deal-4",
-    salonId: "salon-7",
-    title: "Fill our 5PM chair",
-    discountPercent: 35,
-    startIso: inMin(300),
-    endIso: inMin(340),
-    serviceId: "svc-2",
-    seatsLeft: 1,
   },
 ];
 

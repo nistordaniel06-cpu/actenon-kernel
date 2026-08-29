@@ -101,7 +101,7 @@ function MapPreviewCard({ salon }: { salon: Salon }) {
         <p className="truncate font-semibold">{salon.name}</p>
         <p className="truncate text-xs text-muted-foreground">{salon.address}</p>
         <p className="mt-0.5 text-xs font-medium text-accent">
-          {salon.availableNow ? "Available now" : `Next slot`} · {salon.distanceKm.toFixed(1)} km
+          {salon.availableNow ? "Liber acum" : "Următorul loc liber"} · {salon.distanceKm.toFixed(1)} km
         </p>
       </div>
     </a>

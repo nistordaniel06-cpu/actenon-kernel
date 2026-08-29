@@ -21,7 +21,7 @@ export function BarberRow({ barber, salonId }: { barber: Barber; salonId: string
           <p className="truncate font-semibold">{barber.name}</p>
           {barber.availableNow && (
             <Badge variant="success" className="shrink-0">
-              Now
+              Acum
             </Badge>
           )}
         </div>
@@ -29,7 +29,7 @@ export function BarberRow({ barber, salonId }: { barber: Barber; salonId: string
         <div className="mt-1 flex items-center gap-2">
           <Rating value={barber.rating} count={barber.reviewCount} />
           <span className="text-xs text-muted-foreground">
-            {barber.yearsExperience}y exp
+            {barber.yearsExperience} ani exp.
           </span>
         </div>
       </div>

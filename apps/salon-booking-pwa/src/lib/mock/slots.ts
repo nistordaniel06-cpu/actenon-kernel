@@ -53,7 +53,7 @@ export function generateSlots(barberId: string, durationMin: number, days = 5): 
           ? "Today"
           : d === 1
             ? "Tomorrow"
-            : new Intl.DateTimeFormat("en-US", { weekday: "short", day: "numeric" }).format(date),
+            : new Intl.DateTimeFormat("ro-RO", { weekday: "short", day: "numeric" }).format(date),
       slots,
     });
   }

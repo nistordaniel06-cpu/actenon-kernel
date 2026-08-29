@@ -53,7 +53,7 @@ function DialogContent({
         {children}
         <DialogPrimitive.Close className="absolute top-4 right-4 rounded-full p-1.5 opacity-70 transition-opacity hover:opacity-100 hover:bg-secondary">
           <X className="size-4" />
-          <span className="sr-only">Close</span>
+          <span className="sr-only">Închide</span>
         </DialogPrimitive.Close>
       </DialogPrimitive.Content>
     </DialogPortal>
