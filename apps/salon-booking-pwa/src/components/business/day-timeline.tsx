@@ -1,5 +1,4 @@
-import { Barber, Appointment, AppointmentStatus } from "@/lib/types";
-import { getService } from "@/lib/mock/services";
+import { Barber, Appointment, AppointmentStatus, Service } from "@/lib/types";
 import { cn, formatPrice } from "@/lib/utils";
 
 const START_HOUR = 9;
@@ -24,9 +23,11 @@ const STATUS_STYLE: Record<AppointmentStatus, string> = {
 export function DayTimeline({
   barbers,
   appointments,
+  services,
 }: {
   barbers: Barber[];
   appointments: Appointment[];
+  services: Service[];
 }) {
   const hours = Array.from({ length: END_HOUR - START_HOUR + 1 }, (_, i) => START_HOUR + i);
   const totalHeight = (END_HOUR - START_HOUR) * PX_PER_HOUR;
@@ -65,7 +66,7 @@ export function DayTimeline({
                     28,
                     ((minutesFromStart(a.endIso) - minutesFromStart(a.startIso)) / 60) * PX_PER_HOUR,
                   );
-                  const service = getService(a.serviceId);
+                  const service = services.find((s) => s.id === a.serviceId);
                   return (
                     <div
                       key={a.id}

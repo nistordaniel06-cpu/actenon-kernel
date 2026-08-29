@@ -235,7 +235,11 @@ create table public.leaderboard_weekly (
 -- din programări în loc de a fi stocate separat)
 -- ─────────────────────────────────────────────────────────────────────────
 
-create view public.salon_clients as
+-- security_invoker: fără el, un view rulează cu privilegiile celui care l-a
+-- creat (de regulă un superuser în migrare) și ar ocoli complet RLS de pe
+-- appointments — oricine ar putea citi clienții tuturor saloanelor.
+create view public.salon_clients
+with (security_invoker = true) as
 select
   a.salon_id,
   a.client_id,
@@ -248,7 +252,8 @@ select
 from public.appointments a
 group by a.salon_id, a.client_id, a.client_name, a.client_avatar;
 
-create view public.salon_daily_stats as
+create view public.salon_daily_stats
+with (security_invoker = true) as
 select
   salon_id,
   date_trunc('day', start_at) as day,

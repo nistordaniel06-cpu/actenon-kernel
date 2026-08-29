@@ -1,6 +1,9 @@
-import { businessClients } from "@/lib/mock/business";
+import { getBusinessClients } from "@/lib/data/catalog";
 import { ClientsList } from "@/components/shared/clients-list";
 
-export default function SalonProClientsPage() {
-  return <ClientsList clients={businessClients} detailHrefBase="/salon-pro/clients" />;
+const MY_SALON_ID = "salon-1";
+
+export default async function SalonProClientsPage() {
+  const clients = await getBusinessClients(MY_SALON_ID);
+  return <ClientsList clients={clients} detailHrefBase="/salon-pro/clients" />;
 }

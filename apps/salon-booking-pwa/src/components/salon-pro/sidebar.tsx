@@ -14,7 +14,7 @@ import {
   Store,
 } from "lucide-react";
 
-import { myBusinessSalon } from "@/lib/mock/business-context";
+import { Salon } from "@/lib/types";
 import { cn } from "@/lib/utils";
 
 const items = [
@@ -28,7 +28,7 @@ const items = [
   { href: "/salon-pro/checkin", label: "Check-in tabletă", icon: Tablet },
 ] as const;
 
-export function SalonProSidebar() {
+export function SalonProSidebar({ salon }: { salon: Salon }) {
   const pathname = usePathname();
 
   return (
@@ -38,7 +38,7 @@ export function SalonProSidebar() {
           <Store className="size-4.5" />
         </div>
         <div className="min-w-0">
-          <p className="truncate text-sm font-semibold">{myBusinessSalon.name}</p>
+          <p className="truncate text-sm font-semibold">{salon.name}</p>
           <p className="text-xs text-muted-foreground">Salon Pro</p>
         </div>
       </div>

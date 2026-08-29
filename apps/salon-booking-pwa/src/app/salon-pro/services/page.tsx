@@ -1,6 +1,12 @@
-import { myBusinessSalon } from "@/lib/mock/business-context";
+import { notFound } from "next/navigation";
+
+import { getSalonWithBarbers } from "@/lib/data/catalog";
 import { ServicesClient } from "./services-client";
 
-export default function BusinessServicesPage() {
-  return <ServicesClient initialServices={myBusinessSalon.services} />;
+const MY_SALON_ID = "salon-1";
+
+export default async function BusinessServicesPage() {
+  const result = await getSalonWithBarbers(MY_SALON_ID);
+  if (!result) notFound();
+  return <ServicesClient initialServices={result.salon.services} />;
 }

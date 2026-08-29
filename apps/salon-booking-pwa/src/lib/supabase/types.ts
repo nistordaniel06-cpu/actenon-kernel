@@ -86,6 +86,36 @@ export type ServiceRow = {
   active: boolean;
 };
 
+export type ShopProductRow = {
+  id: string;
+  name: string;
+  category: "pomade" | "beard" | "shampoo" | "tools";
+  price: number;
+  member_price: number;
+  image: string | null;
+  description: string | null;
+  pickup_only: boolean;
+};
+
+export type StaffRow = {
+  id: string;
+  salon_id: string;
+  barber_id: string;
+  shift: string;
+  commission_percent: number;
+};
+
+export type SalonClientRow = {
+  salon_id: string;
+  client_id: string | null;
+  client_name: string;
+  client_avatar: string | null;
+  visits: number;
+  last_visit: string | null;
+  total_spent: number;
+  favorite_service_id: string | null;
+};
+
 type ReadOnlyTable<Row> = {
   Row: Row;
   Insert: Row;
@@ -120,8 +150,12 @@ export interface Database {
       salons: ReadOnlyTable<SalonRow>;
       barbers: ReadOnlyTable<BarberRow>;
       services: ReadOnlyTable<ServiceRow>;
+      shop_products: ReadOnlyTable<ShopProductRow>;
+      staff: ReadOnlyTable<StaffRow>;
     };
-    Views: Record<string, never>;
+    Views: {
+      salon_clients: { Row: SalonClientRow; Relationships: [] };
+    };
     Functions: Record<string, never>;
   };
 }

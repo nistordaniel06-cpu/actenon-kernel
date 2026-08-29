@@ -4,8 +4,7 @@ import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { ArrowLeft, Star } from "lucide-react";
 
-import { BusinessClient } from "@/lib/types";
-import { getService } from "@/lib/mock/services";
+import { BusinessClient, Service } from "@/lib/types";
 import { useAppStore } from "@/lib/store";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
@@ -13,7 +12,13 @@ import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
 import { formatDateTime, formatPrice, initials } from "@/lib/utils";
 
-export function ClientDetail({ client }: { client: BusinessClient | undefined }) {
+export function ClientDetail({
+  client,
+  services,
+}: {
+  client: BusinessClient | undefined;
+  services: Service[];
+}) {
   const router = useRouter();
   const appointments = useAppStore((s) => s.appointments);
   const [note, setNote] = useState("");
@@ -65,7 +70,7 @@ export function ClientDetail({ client }: { client: BusinessClient | undefined })
             history.map((a) => (
               <div key={a.id} className="flex items-center justify-between rounded-xl border border-border bg-card p-3 text-sm">
                 <div>
-                  <p className="font-medium">{getService(a.serviceId)?.name}</p>
+                  <p className="font-medium">{services.find((s) => s.id === a.serviceId)?.name}</p>
                   <p className="text-xs text-muted-foreground">{formatDateTime(a.startIso)}</p>
                 </div>
                 <span className="font-semibold">{formatPrice(a.price)}</span>

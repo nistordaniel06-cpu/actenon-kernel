@@ -1,6 +1,10 @@
 import { FileText, Receipt, TrendingUp } from "lucide-react";
+import { notFound } from "next/navigation";
 
+import { getSalonWithBarbers } from "@/lib/data/catalog";
 import { BusinessHeader } from "@/components/business/business-header";
+
+const MY_SALON_ID = "salon-1";
 
 const sections = [
   { icon: Receipt, title: "Facturi", desc: "Emitere și export facturi pentru clienți și furnizori." },
@@ -8,10 +12,13 @@ const sections = [
   { icon: FileText, title: "Export contabilitate", desc: "Export compatibil pentru contabilul salonului." },
 ];
 
-export default function ReportsPage() {
+export default async function ReportsPage() {
+  const result = await getSalonWithBarbers(MY_SALON_ID);
+  if (!result) notFound();
+
   return (
     <div className="flex flex-col gap-5">
-      <BusinessHeader title="Facturi & rapoarte" subtitle="Pregătit pentru etapa următoare" />
+      <BusinessHeader salon={result.salon} title="Facturi & rapoarte" subtitle="Pregătit pentru etapa următoare" />
 
       <div className="flex flex-col gap-3 px-5 pb-6">
         {sections.map((s) => (

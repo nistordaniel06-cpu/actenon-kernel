@@ -33,9 +33,9 @@ de mediu setate, aplicația rulează exact ca până acum, pe date mock.
 - Recharts pentru statistici
 - date-fns instalat, formatele curente folosesc `Intl` cu locale `ro-RO`
 - Supabase (`@supabase/supabase-js` + `@supabase/ssr`) — schemă, autentificare
-  pe email, scrierea programărilor, citirea saloanelor/frizerilor/serviciilor
-  și Storage pentru fotografii (copertă/galerie salon, portofoliu frizer)
-  sunt cablate; restul citirilor rămân pe mock până la etapa următoare (vezi mai jos)
+  pe email, scrierea programărilor, Storage pentru fotografii și citirea
+  saloanelor/frizerilor/serviciilor/magazinului/personalului/clienților sunt
+  cablate; restul ecranelor rămân pe mock până la etapa următoare (vezi mai jos)
 
 ## Structură
 
@@ -57,9 +57,11 @@ de mediu setate, aplicația rulează exact ca până acum, pe date mock.
 - `src/lib/supabase/` — client browser/server (cu timeout pe fiecare cerere,
   ca un backend nedisponibil să nu blocheze pagina), config
   (`isSupabaseConfigured()`), autentificare pe email, mirror-ul scrierilor de programări
-- `src/lib/data/catalog.ts` — citirea saloanelor/frizerilor/serviciilor: din
-  Postgres când Supabase e configurat, altfel din mock — folosit de ecranele
-  server Descoperă, profil salon și rezervare
+- `src/lib/data/catalog.ts` — citirea catalogului (saloane, frizeri, servicii,
+  magazin, personal, clienți): din Postgres când Supabase e configurat, altfel
+  din mock, cu `cache()` din React ca un layout și o pagină să nu dubleze
+  aceeași cerere; `src/lib/data/mappers.ts` conține funcțiile pure de mapare
+  rând → tip din aplicație
 - `src/lib/supabase/storage.ts` — încărcare de imagini în bucket-ul public
   `media`; `src/lib/supabase/media.ts` — mirror-ul actualizărilor de fotografii
   (copertă/galerie salon, portofoliu frizer) către Postgres
@@ -125,16 +127,24 @@ Toate trec fără erori la ultima verificare (29 rute compilate).
   acum și în Postgres, best-effort, când ești autentificat — starea Zustand
   locală rămâne mereu sursa de adevăr pentru UI, deci nimic nu se rupe dacă
   scrierea remote eșuează sau dacă nu ești logat.
-- Citirea saloanelor, frizerilor și serviciilor pe cele trei ecrane server
-  (Descoperă, profil salon, rezervare) — `src/lib/data/catalog.ts` interoghează
-  Postgres când e configurat, cu timeout de 5s pe fiecare cerere ca un backend
-  nedisponibil să nu blocheze pagina, și revine automat pe mock la orice eroare.
+- Citirea catalogului pe toate ecranele Server Component: Descoperă, profil
+  salon, rezervare, tot Salon Pro (dashboard, calendar echipă, servicii,
+  campanii, check-in tabletă, personal, profil), listele de clienți (Salon
+  Pro și Frizer) și Magazin. `src/lib/data/catalog.ts` interoghează Postgres
+  când e configurat, cu timeout de 5s pe fiecare cerere ca un backend
+  nedisponibil să nu blocheze pagina, și revine automat pe mock la orice
+  eroare — verificat inclusiv cu un proiect Supabase inexistent.
+- Lista de clienți e derivată din `programări` printr-un view Postgres
+  (`salon_clients`), nu stocată separat — pe un proiect nou, fără programări
+  reale încă, pornește goală în loc să inventeze clienți; „tag"-ul (nou/fidel/
+  VIP/în risc) se calculează din numărul de vizite și data ultimei vizite.
 - Schema completă (saloane, frizeri, servicii, personal, recenzii, campanii,
   boost-uri, magazin, roata zilnică, puncte, clasament) cu RLS: catalogul e
   public la citire, programările/recenziile/punctele sunt vizibile doar
   clientului lor sau frizerului/salonului implicat, iar constrângerea
   `exclude` de pe `appointments` respinge la nivel de bază de date orice
-  suprapunere pe același frizer.
+  suprapunere pe același frizer. View-urile derivate rulează cu
+  `security_invoker` — altfel ar fi ocolit RLS de pe `appointments`.
 - Supabase Storage: „Schimbă coperta" și adăugarea de fotografii în galeria
   salonului (Salon Pro) și în portofoliul frizerului încarcă imagini reale în
   bucket-ul public `media` și persistă URL-ul în Postgres. Fără Supabase
@@ -143,13 +153,20 @@ Toate trec fără erori la ultima verificare (29 rute compilate).
 
 **Ce rămâne pentru etapa următoare:**
 
-- Restul citirilor din `src/lib/mock/` (magazin, agenda frizerului, contextul
-  Salon Pro, listele de clienți) rulează încă pe mock. Cele trei ecrane deja
-  cablate sunt Server Components care pasează date gata rezolvate mai departe;
-  restul sunt Client Components care fac lookup-uri sincrone direct din mock
-  la randare — trecerea lor pe Supabase cere fie o restructurare
-  server/client asemănătoare, fie o stare de încărcare (skeleton) pentru citiri
-  client-side, ca să nu apară ecrane pe jumătate populate.
+- Ecranele care depind de identitatea curentă din demo (`currentBarberId` din
+  Zustand, ales prin „Schimbă rolul" din Profil, nu dintr-o sesiune reală) —
+  agenda frizerului, portofoliul de bază (fotografiile încărcate real
+  funcționează deja, doar numele/salonul frizerului rămân mock), recenziile
+  frizerului — rămân pe mock. O pagină server nu poate ști ce rol ai ales
+  în client fără o sesiune reală; trecerea lor pe Supabase înseamnă fie
+  legarea `barbers.profile_id` de utilizatorul autentificat, fie un prim strat
+  de citire client-side cu fallback pe mock — încă neconstruit, ca să nu
+  amestec două tipare diferite de citire într-o singură etapă.
+- Comunitate (clasament) și Style Passport citesc tot din mock, din același
+  motiv sau pentru că depind de istoricul de programări al clientului curent.
+  Cererea rapidă rămâne pe mock: serviciile sunt acum per-salon în schemă, iar
+  lista ei globală de „servicii populare" ar cere fie deduplicare, fie un
+  tabel separat de categorii — nu l-am construit încă.
 - Autentificare cu telefon / Apple (schema de `profiles` e neutră la
   provider; azi e cablat doar email, cel mai simplu de activat fără cheile
   unui provider extern).

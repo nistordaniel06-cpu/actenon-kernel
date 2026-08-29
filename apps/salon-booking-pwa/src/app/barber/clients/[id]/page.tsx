@@ -1,12 +1,14 @@
-"use client";
-
-import { use } from "react";
-
-import { businessClients } from "@/lib/mock/business";
+import { getBusinessClients, getSalonWithBarbers } from "@/lib/data/catalog";
 import { ClientDetail } from "@/components/shared/client-detail";
 
-export default function BarberClientDetailPage({ params }: PageProps<"/barber/clients/[id]">) {
-  const { id } = use(params);
-  const client = businessClients.find((c) => c.id === id);
-  return <ClientDetail client={client} />;
+const MY_SALON_ID = "salon-1";
+
+export default async function BarberClientDetailPage({ params }: PageProps<"/barber/clients/[id]">) {
+  const { id } = await params;
+  const [clients, result] = await Promise.all([
+    getBusinessClients(MY_SALON_ID),
+    getSalonWithBarbers(MY_SALON_ID),
+  ]);
+  const client = clients.find((c) => c.id === id);
+  return <ClientDetail client={client} services={result?.salon.services ?? []} />;
 }
