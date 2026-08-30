@@ -82,7 +82,7 @@ npm install
 npm run dev
 ```
 
-Deschide http://localhost:3000 — ecranul de bun venit. Alege un rol (fără
+Deschide `http://localhost:3000` — ecranul de bun venit. Alege un rol (fără
 autentificare reală în această etapă — orice buton te duce direct în demo):
 
 - **Sunt client** → `/home`
@@ -173,3 +173,11 @@ Toate trec fără erori la ultima verificare (29 rute compilate).
 - Sincronizare reală cu Google Calendar API pentru frizeri (link-ul Google
   Calendar și fișierul `.ics` pentru client sunt deja generate în flux).
 - Facturare/abonament pentru Salon Pro (secțiunea Rapoarte e pregătită ca placeholder).
+
+## Urmărirea issue-urilor NearCut
+
+Adaugă eticheta `nearcut` fiecărui issue care aparține acestei aplicații.
+Workflow-ul `.github/workflows/nearcut-open-issues.yml` rulează zilnic la
+08:20 UTC (și manual din Actions), numără doar issue-urile NearCut deschise și
+creează sau actualizează un singur raport marcat `automated-report`. Raportul
+automat este exclus din numărătoare.

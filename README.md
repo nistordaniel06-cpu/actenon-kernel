@@ -64,7 +64,7 @@ The Kernel is one of the independent repositories that together close the **exec
 | **`actenon-permit`** | The developer on-ramp and authority broker | `actenon-kernel`, `actenon-protocol` | `actenon-permit` (PyPI) · `@actenon/sdk` (npm) |
 | **`actenon-scan`** | The independent static-analysis scanner | — | `actenon-scan` (PyPI) |
 
-**Optional:** [`actenon-cloud`](https://github.com/Actenon/actenon-cloud) — a managed control plane (source-available; see its LICENSE). Not required by any component above; every capability in this ecosystem works without it.
+**Optional:** `actenon-cloud` — a managed control plane (source-available; see its LICENSE). Not required by any component above; every capability in this ecosystem works without it.
 <!-- ECOSYSTEM-TABLE:END -->
 
 Every repo can be adopted independently. The Kernel in particular can be wired in **at the agent framework** (LangChain tool, MCP tool, Claude Managed Agents custom tool, etc.) **or independently at the resource boundary** (FastAPI route, Express route, Go HTTP handler). Both placements are first-class.
