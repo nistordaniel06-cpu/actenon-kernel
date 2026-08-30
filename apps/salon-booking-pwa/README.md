@@ -82,7 +82,7 @@ npm install
 npm run dev
 ```
 
-Deschide http://localhost:3000 — ecranul de bun venit. Alege un rol (fără
+Deschide `http://localhost:3000` — ecranul de bun venit. Alege un rol (fără
 autentificare reală în această etapă — orice buton te duce direct în demo):
 
 - **Sunt client** → `/home`
