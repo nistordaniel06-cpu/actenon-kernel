@@ -1,0 +1,85 @@
+name: Report NearCut open issues
+
+on:
+  schedule:
+    # Daily at 8:20 UTC
+    - cron: "20 8 * * *"
+  workflow_dispatch:
+
+permissions:
+  issues: write
+
+concurrency:
+  group: nearcut-open-issues-report
+  cancel-in-progress: false
+
+jobs:
+  report_nearcut_open_issues:
+    runs-on: ubuntu-latest
+    env:
+      GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      PROJECT_LABEL: nearcut
+      REPORT_LABEL: automated-report
+      REPORT_TITLE: NearCut daily open issues report
+    steps:
+      - name: Ensure report labels exist
+        run: |
+          gh label create "$PROJECT_LABEL" \
+            --repo "$GITHUB_REPOSITORY" \
+            --color "A3E635" \
+            --description "NearCut booking platform" \
+            --force
+          gh label create "$REPORT_LABEL" \
+            --repo "$GITHUB_REPOSITORY" \
+            --color "1D76DB" \
+            --description "Automated open-issues report" \
+            --force
+
+      - name: Count NearCut open issues
+        run: |
+          search_query="repo:${GITHUB_REPOSITORY} is:issue is:open label:${PROJECT_LABEL} -label:${REPORT_LABEL}"
+
+          num_open_issues="$(
+            gh api graphql \
+              -f query='
+                query($searchQuery: String!) {
+                  search(query: $searchQuery, type: ISSUE) {
+                    issueCount
+                  }
+                }
+              ' \
+              -F searchQuery="$search_query" \
+              --jq '.data.search.issueCount'
+          )"
+
+          printf 'NUM_OPEN_ISSUES=%s\n' "$num_open_issues" >> "$GITHUB_ENV"
+
+      - name: Create or update NearCut report
+        run: |
+          report_number="$(
+            gh issue list \
+              --repo "$GITHUB_REPOSITORY" \
+              --state open \
+              --label "$REPORT_LABEL" \
+              --limit 1 \
+              --json number \
+              --jq '.[0].number // empty'
+          )"
+
+          updated_at="$(date -u '+%Y-%m-%d %H:%M:%S')"
+          body="$(printf 'NearCut issues remaining: **%s**\n\nUpdated automatically at `%s UTC`.' \
+            "$NUM_OPEN_ISSUES" "$updated_at")"
+
+          if [[ -n "$report_number" ]]; then
+            gh issue edit "$report_number" \
+              --repo "$GITHUB_REPOSITORY" \
+              --title "$REPORT_TITLE" \
+              --body "$body"
+          else
+            gh issue create \
+              --repo "$GITHUB_REPOSITORY" \
+              --title "$REPORT_TITLE" \
+              --body "$body" \
+              --label "$PROJECT_LABEL" \
+              --label "$REPORT_LABEL"
+          fi
