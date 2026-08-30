@@ -1,0 +1,300 @@
+<!doctype html>
+<html lang="ro">
+<head>
+<meta charset="utf-8" />
+<title>Exploit Empire — Mafia vs Politia</title>
+<style>
+  :root {
+    --bg: #0d0d10;
+    --panel: #17171c;
+    --panel-2: #1e1e26;
+    --border: #2c2c36;
+    --gold: #e0b84b;
+    --red: #c0392b;
+    --green: #3fa34d;
+    --text: #e8e6df;
+    --muted: #9a97a8;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    background: radial-gradient(ellipse at top, #1a1420 0%, var(--bg) 60%);
+    color: var(--text);
+    font-family: "Georgia", "Times New Roman", serif;
+    min-height: 100vh;
+  }
+  header {
+    padding: 18px 24px;
+    border-bottom: 2px solid var(--gold);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 12px;
+  }
+  header h1 {
+    margin: 0;
+    font-size: 1.6rem;
+    letter-spacing: 1px;
+    color: var(--gold);
+    text-shadow: 0 0 12px rgba(224,184,75,0.35);
+  }
+  header .sub { color: var(--muted); font-size: 0.85rem; font-family: monospace; }
+  .stats {
+    display: flex;
+    gap: 18px;
+    align-items: center;
+    flex-wrap: wrap;
+  }
+  .stat { text-align: right; }
+  .stat .label { font-size: 0.7rem; color: var(--muted); text-transform: uppercase; letter-spacing: 1px; }
+  .stat .value { font-size: 1.3rem; font-weight: bold; }
+  #coins { color: var(--gold); font-size: 1.8rem; }
+  .heatbar-wrap { width: 160px; }
+  .heatbar { height: 10px; border-radius: 5px; background: #2a2a33; overflow: hidden; border: 1px solid var(--border); }
+  .heatbar-fill { height: 100%; background: linear-gradient(90deg, #f5d76e, var(--red)); transition: width 0.4s; }
+
+  main {
+    max-width: 1100px;
+    margin: 0 auto;
+    padding: 20px;
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 18px;
+  }
+  @media (max-width: 800px) { main { grid-template-columns: 1fr; } }
+
+  .panel {
+    background: var(--panel);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 16px 18px;
+  }
+  .panel h2 {
+    margin: 0 0 12px 0;
+    font-size: 1.05rem;
+    color: var(--gold);
+    border-bottom: 1px solid var(--border);
+    padding-bottom: 8px;
+  }
+  .heist {
+    background: var(--panel-2);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 12px;
+    margin-bottom: 10px;
+  }
+  .heist h3 { margin: 0 0 4px 0; font-size: 1rem; }
+  .heist .tech { font-family: monospace; font-size: 0.72rem; color: var(--muted); display: block; margin-bottom: 8px; }
+  .heist .range { font-size: 0.78rem; color: var(--muted); margin-bottom: 8px; }
+  button {
+    font-family: inherit;
+    cursor: pointer;
+    border: none;
+    border-radius: 6px;
+    padding: 8px 14px;
+    font-size: 0.85rem;
+    font-weight: bold;
+  }
+  .btn-heist { background: var(--red); color: #fff; width: 100%; }
+  .btn-heist:disabled { background: #4a4a52; color: #999; cursor: not-allowed; }
+  .btn-shop { background: var(--gold); color: #241c00; width: 100%; }
+  .btn-shop:disabled { background: #4a4a52; color: #999; cursor: not-allowed; }
+  .shop-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    background: var(--panel-2);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 10px 12px;
+    margin-bottom: 8px;
+  }
+  .shop-item .info { font-size: 0.85rem; }
+  .shop-item .cost { color: var(--gold); font-size: 0.75rem; }
+  .club-owned { opacity: 0.55; }
+
+  #log {
+    grid-column: 1 / -1;
+    max-height: 220px;
+    overflow-y: auto;
+    font-family: monospace;
+    font-size: 0.8rem;
+    line-height: 1.5;
+  }
+  #log .entry { border-bottom: 1px dashed var(--border); padding: 4px 0; }
+  #log .entry .time { color: var(--muted); margin-right: 8px; }
+  #log .bust { color: var(--red); font-weight: bold; }
+  #log .win { color: var(--green); }
+
+  .flash {
+    position: fixed;
+    top: 16px;
+    right: 16px;
+    max-width: 340px;
+    padding: 12px 16px;
+    border-radius: 8px;
+    background: var(--panel-2);
+    border: 1px solid var(--gold);
+    box-shadow: 0 6px 20px rgba(0,0,0,0.5);
+    font-size: 0.85rem;
+    animation: fadein 0.3s ease-out;
+    z-index: 10;
+  }
+  .flash.bust { border-color: var(--red); }
+  @keyframes fadein { from { opacity: 0; transform: translateY(-8px); } to { opacity: 1; transform: translateY(0); } }
+</style>
+</head>
+<body>
+
+<header>
+  <div>
+    <h1>🕴️ Exploit Empire — Mafia vs Politia</h1>
+    <div class="sub">powered by actenon-kernel: BoundaryVerifier bypass · idempotency ordering bug · leaked public HMAC secret</div>
+  </div>
+  <div class="stats">
+    <div class="stat">
+      <div class="label">Nivel Mafie</div>
+      <div class="value" id="level">1</div>
+    </div>
+    <div class="stat">
+      <div class="label">Poliția (heat)</div>
+      <div class="heatbar-wrap">
+        <div class="heatbar"><div class="heatbar-fill" id="heatfill" style="width:0%"></div></div>
+        <div style="font-size:0.7rem;color:var(--muted);margin-top:2px;" id="heattext">0% sansa de razie</div>
+      </div>
+    </div>
+    <div class="stat">
+      <div class="label">Coins</div>
+      <div class="value" id="coins">0</div>
+    </div>
+  </div>
+</header>
+
+<main>
+  <section class="panel">
+    <h2>Lovituri (rulează exploit-uri reale)</h2>
+    <div id="heists"></div>
+  </section>
+
+  <section class="panel">
+    <h2>Recrutare &amp; upgrade</h2>
+    <div class="shop-item">
+      <div class="info">Recrutează attacker<br><span class="cost" id="cost-recruit"></span></div>
+      <button class="btn-shop" onclick="doShop('recruit')">Recrutează</button>
+    </div>
+    <div class="shop-item">
+      <div class="info">Upgrade arme<br><span class="cost" id="cost-weapon"></span></div>
+      <button class="btn-shop" onclick="doShop('weapon')">Cumpără</button>
+    </div>
+    <div class="shop-item">
+      <div class="info">Antrenament<br><span class="cost" id="cost-train"></span></div>
+      <button class="btn-shop" onclick="doShop('train')">Antrenează</button>
+    </div>
+  </section>
+
+  <section class="panel" style="grid-column: 1 / -1;">
+    <h2>Locații &amp; cluburi (venit pasiv)</h2>
+    <div id="clubs" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:10px;"></div>
+  </section>
+
+  <section class="panel" id="log">
+    <h2>Jurnal de activitate</h2>
+    <div id="log-entries"></div>
+  </section>
+</main>
+
+<script>
+const fmt = (n) => Math.floor(n).toLocaleString('ro-RO');
+
+async function api(path, body) {
+  const opts = body !== undefined
+    ? { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify(body) }
+    : { method: 'GET' };
+  const res = await fetch(path, opts);
+  return res.json();
+}
+
+function flash(message, isBust) {
+  const el = document.createElement('div');
+  el.className = 'flash' + (isBust ? ' bust' : '');
+  el.textContent = message;
+  document.body.appendChild(el);
+  setTimeout(() => el.remove(), 4200);
+}
+
+function render(state) {
+  document.getElementById('coins').textContent = fmt(state.coins);
+  document.getElementById('level').textContent = state.mafia_level;
+  const heatPct = Math.min(100, Math.round(state.heat));
+  document.getElementById('heatfill').style.width = heatPct + '%';
+  document.getElementById('heattext').textContent = Math.round(state.bust_chance_now * 100) + '% sansa de razie';
+
+  const heistsEl = document.getElementById('heists');
+  heistsEl.innerHTML = '';
+  for (const [key, info] of Object.entries(state.heist_info)) {
+    const locked = info.min_level && state.mafia_level < info.min_level;
+    const div = document.createElement('div');
+    div.className = 'heist';
+    div.innerHTML = `
+      <h3>${info.name}${locked ? ' 🔒 (nivel ' + info.min_level + ')' : ''}</h3>
+      <span class="tech">${info.technique}</span>
+      <div class="range">castig estimativ: ${info.base_min}–${info.base_max} coins &times; ${state.multiplier}</div>
+      <button class="btn-heist" ${locked ? 'disabled' : ''} onclick="doHeist('${key}')">Lovește</button>
+    `;
+    heistsEl.appendChild(div);
+  }
+
+  document.getElementById('cost-recruit').textContent = 'cost: ' + fmt(150 * Math.pow(1.15, state.attackers)) + ' coins (' + state.attackers + ' recrutati)';
+  document.getElementById('cost-weapon').textContent = 'cost: ' + fmt(2000 * Math.pow(1.6, state.weapon_level)) + ' coins (nivel ' + state.weapon_level + ')';
+  document.getElementById('cost-train').textContent = 'cost: ' + fmt(1200 * Math.pow(1.5, state.training_level)) + ' coins (nivel ' + state.training_level + ')';
+
+  const clubsEl = document.getElementById('clubs');
+  clubsEl.innerHTML = '';
+  for (const club of state.clubs) {
+    const div = document.createElement('div');
+    div.className = 'shop-item' + (club.owned ? ' club-owned' : '');
+    div.innerHTML = `
+      <div class="info">${club.name}<br><span class="cost">${club.owned ? '+' + club.income_per_sec + ' coins/sec' : 'cost: ' + fmt(club.cost)}</span></div>
+      <button class="btn-shop" ${club.owned ? 'disabled' : ''} onclick="doClub('${club.id}')">${club.owned ? 'Deținut' : 'Cumpără'}</button>
+    `;
+    clubsEl.appendChild(div);
+  }
+
+  const logEl = document.getElementById('log-entries');
+  logEl.innerHTML = state.log.map(e =>
+    `<div class="entry"><span class="time">${e.t}</span>${e.message}</div>`
+  ).join('');
+}
+
+async function refresh() {
+  const state = await api('/api/state');
+  render(state);
+}
+
+async function doHeist(type) {
+  const state = await api('/api/heist', { type });
+  render(state);
+  if (state.heist_result) {
+    flash(state.heist_result.message, state.heist_result.busted);
+  }
+}
+
+async function doShop(kind) {
+  const state = await api('/api/shop/' + kind, {});
+  render(state);
+  if (state.error) flash(state.error, false);
+}
+
+async function doClub(clubId) {
+  const state = await api('/api/shop/club', { club_id: clubId });
+  render(state);
+  if (state.error) flash(state.error, false);
+}
+
+refresh();
+setInterval(refresh, 2000);
+</script>
+
+</body>
+</html>

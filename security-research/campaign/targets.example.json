@@ -1,0 +1,11 @@
+{
+  "_comment": "Copiaza acest fisier ca 'targets.json' si adauga aici, RAPID, lista primita de la organizatorii concursului. Fiecare intrare = o tinta AUTORIZATA explicit de organizatori. Nu adauga nimic ce nu ti s-a dat explicit ca fiind in perimetrul concursului.",
+  "targets": [
+    {
+      "name": "exemplu-echipa-1",
+      "host": "10.10.10.5",
+      "ports": [80, 443, 8080, 8787, 8900, 8950],
+      "notes": "inlocuieste cu host-ul real dat de organizatori"
+    }
+  ]
+}
