@@ -58,6 +58,18 @@ function timeZoneOffsetMs(date: Date, timeZone: string) {
   return representedAsUtc - date.getTime();
 }
 
+export function formatDateInTimeZone(date: Date, timeZone: string) {
+  const parts = new Intl.DateTimeFormat("en-CA", {
+    timeZone,
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+  }).formatToParts(date);
+  const get = (type: "year" | "month" | "day") =>
+    parts.find((part) => part.type === type)?.value ?? "";
+  return `${get("year")}-${get("month")}-${get("day")}`;
+}
+
 /** Convert a salon-local wall-clock value to the corresponding UTC instant. */
 export function localDateTimeToUtc(date: string, time: string, timeZone: string) {
   const [year, month, day] = date.split("-").map(Number);
