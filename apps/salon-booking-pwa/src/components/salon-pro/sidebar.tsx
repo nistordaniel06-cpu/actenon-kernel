@@ -12,6 +12,7 @@ import {
   FileText,
   Tablet,
   Store,
+  MessageCircle,
 } from "lucide-react";
 
 import { Salon } from "@/lib/types";
@@ -23,6 +24,7 @@ const items = [
   { href: "/salon-pro/clients", label: "Clienți", icon: Users },
   { href: "/salon-pro/staff", label: "Personal", icon: UserCog },
   { href: "/salon-pro/services", label: "Servicii", icon: Tag },
+  { href: "/salon-pro/whatsapp", label: "WhatsApp", icon: MessageCircle },
   { href: "/salon-pro/campaigns", label: "Campanii", icon: Megaphone },
   { href: "/salon-pro/reports", label: "Facturi & rapoarte", icon: FileText },
   { href: "/salon-pro/checkin", label: "Check-in tabletă", icon: Tablet },
