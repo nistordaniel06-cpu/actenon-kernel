@@ -2,7 +2,7 @@ import { createHmac, timingSafeEqual } from "node:crypto";
 
 import { NextRequest, NextResponse } from "next/server";
 
-import { formatDateInTimeZone } from "@/lib/booking/availability";
+import { addDaysToLocalDate, formatDateInTimeZone } from "@/lib/booking/availability";
 import { getSupabaseAdminClient } from "@/lib/supabase/admin";
 import { sendWhatsAppList, sendWhatsAppText } from "@/lib/whatsapp/cloud-api";
 
@@ -74,11 +74,9 @@ function verifySignature(rawBody: string, signature: string | null) {
 
 function parseRequestedDate(text: string, timezone: string) {
   const value = normalize(text);
-  const now = new Date();
-  if (value === "azi") return formatDateInTimeZone(now, timezone);
-  if (value === "maine") {
-    return formatDateInTimeZone(new Date(now.getTime() + 30 * 60 * 60 * 1000), timezone);
-  }
+  const today = formatDateInTimeZone(new Date(), timezone);
+  if (value === "azi") return today;
+  if (value === "maine") return addDaysToLocalDate(today, 1);
   if (/^\d{4}-\d{2}-\d{2}$/.test(value)) return value;
   return null;
 }
@@ -121,9 +119,15 @@ async function createAppointment(input: {
   customerName: string;
   startAt: string;
 }) {
+  const internalKey = process.env.NEARCUT_INTERNAL_API_SECRET;
+  if (!internalKey) throw new Error("NEARCUT_INTERNAL_API_SECRET lipsește.");
+
   const response = await fetch(`${appUrl()}/api/appointments`, {
     method: "POST",
-    headers: { "Content-Type": "application/json" },
+    headers: {
+      "Content-Type": "application/json",
+      "x-nearcut-internal-key": internalKey,
+    },
     body: JSON.stringify({ ...input, source: "whatsapp" }),
     cache: "no-store",
   });
@@ -161,7 +165,6 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ ok: false }, { status: 400 });
   }
 
-  // Acknowledge status-only callbacks without doing booking work.
   const value = payload.entry?.[0]?.changes?.[0]?.value;
   const phoneNumberId = value?.metadata?.phone_number_id;
   const message = value?.messages?.[0];
@@ -419,8 +422,6 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ ok: true });
   } catch (error) {
     console.error("[whatsapp:webhook]", error);
-    // Meta expects a fast 2xx acknowledgment; internal errors are logged and retried
-    // by product-level recovery instead of triggering an uncontrolled webhook loop.
     return NextResponse.json({ ok: true });
   }
 }
