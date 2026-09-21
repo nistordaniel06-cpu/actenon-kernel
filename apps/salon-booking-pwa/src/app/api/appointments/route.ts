@@ -8,6 +8,7 @@ import {
   generateAvailableSlots,
   localDateTimeToUtc,
 } from "@/lib/booking/availability";
+import { syncAppointmentToGoogle } from "@/lib/calendar/sync";
 import { getSupabaseAdminClient } from "@/lib/supabase/admin";
 
 const createSchema = z.object({
@@ -181,7 +182,11 @@ export async function POST(request: Request) {
       throw insertError;
     }
 
-    return NextResponse.json({ appointment }, { status: 201 });
+    // Calendar errors do not roll back a valid booking; they are persisted in
+    // calendar_events with sync_status=failed so the salon can retry later.
+    const calendarSync = await syncAppointmentToGoogle(appointment.id);
+
+    return NextResponse.json({ appointment, calendarSync }, { status: 201 });
   } catch (error) {
     console.error("[appointments:create]", error);
     return NextResponse.json(
