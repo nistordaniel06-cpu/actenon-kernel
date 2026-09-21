@@ -21,7 +21,17 @@ const createSchema = z.object({
   source: z.enum(["whatsapp", "app", "manual"]).default("whatsapp"),
 });
 
+function authorizedInternalRequest(request: Request) {
+  const expected = process.env.NEARCUT_INTERNAL_API_SECRET;
+  const received = request.headers.get("x-nearcut-internal-key");
+  return Boolean(expected && received && expected === received);
+}
+
 export async function POST(request: Request) {
+  if (!authorizedInternalRequest(request)) {
+    return NextResponse.json({ error: "Unauthorized." }, { status: 401 });
+  }
+
   const body = await request.json().catch(() => null);
   const parsed = createSchema.safeParse(body);
   if (!parsed.success) {
