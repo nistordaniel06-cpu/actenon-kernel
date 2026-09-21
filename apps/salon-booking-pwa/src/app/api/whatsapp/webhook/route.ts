@@ -4,6 +4,7 @@ import { NextRequest, NextResponse } from "next/server";
 
 import { addDaysToLocalDate, formatDateInTimeZone } from "@/lib/booking/availability";
 import { getSupabaseAdminClient } from "@/lib/supabase/admin";
+import type { WhatsAppBookingState } from "@/lib/supabase/types";
 import { sendWhatsAppList, sendWhatsAppText } from "@/lib/whatsapp/cloud-api";
 
 type IncomingMessage = {
@@ -194,12 +195,15 @@ export async function POST(request: NextRequest) {
       .maybeSingle();
     if (conversationError) throw conversationError;
 
-    const state = String(existing?.state ?? "START");
+    const state: WhatsAppBookingState = existing?.state ?? "START";
     const context = (existing?.context ?? {}) as ConversationContext;
     const choice = selectedId(message);
     const text = message.text?.body?.trim() ?? "";
 
-    const saveConversation = async (nextState: string, nextContext: ConversationContext) => {
+    const saveConversation = async (
+      nextState: WhatsAppBookingState,
+      nextContext: ConversationContext,
+    ) => {
       const { error } = await supabase.from("whatsapp_conversations").upsert(
         {
           ...(existing?.id ? { id: existing.id } : {}),
