@@ -70,6 +70,11 @@ export function formatDateInTimeZone(date: Date, timeZone: string) {
   return `${get("year")}-${get("month")}-${get("day")}`;
 }
 
+export function addDaysToLocalDate(date: string, days: number) {
+  const [year, month, day] = date.split("-").map(Number);
+  return new Date(Date.UTC(year, month - 1, day + days)).toISOString().slice(0, 10);
+}
+
 /** Convert a salon-local wall-clock value to the corresponding UTC instant. */
 export function localDateTimeToUtc(date: string, time: string, timeZone: string) {
   const [year, month, day] = date.split("-").map(Number);
