@@ -97,6 +97,7 @@ jobs:
         run: |
           python - <<'EOF'
           import json, os, pathlib, sys, tomllib
+          from urllib.parse import urlparse
 
           from packaging.version import Version
 
@@ -111,12 +112,18 @@ jobs:
           if marker not in readme:
               problems.append(f"README.md is missing the ownership marker {marker!r}")
 
-          # The registry namespace is CASE-SENSITIVE and must match the GitHub
-          # owner exactly: it grants io.github.<Owner>/*. Getting this wrong
-          # costs a published version, because the marker lives in the README
-          # that PyPI freezes into the package description. Caught here instead.
-          owner = os.environ.get("GITHUB_REPOSITORY", "/").split("/")[0]
-          if owner:
+          # The registry namespace is CASE-SENSITIVE and matches the canonical
+          # repository owner. Use server.json rather than GITHUB_REPOSITORY:
+          # scheduled runs on forks inherit the canonical listing metadata.
+          repository_url = urlparse(server["repository"]["url"])
+          repository_parts = [part for part in repository_url.path.split("/") if part]
+          if repository_url.hostname != "github.com" or len(repository_parts) < 2:
+              problems.append(
+                  f"server.json repository URL is not a GitHub repository URL: "
+                  f"{server['repository']['url']!r}"
+              )
+          else:
+              owner = repository_parts[0]
               expected_prefix = f"io.github.{owner}/"
               if not server["name"].startswith(expected_prefix):
                   problems.append(
